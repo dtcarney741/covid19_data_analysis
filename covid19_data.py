@@ -1,11 +1,8 @@
-from collections import Counter
 import csv
-import networkx as nx
 import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.patches import Arc
 
 class Covid19_Data(object):  
     
@@ -126,6 +123,16 @@ class Covid19_Data(object):
 
         return(found_everything)
 
+    def __create_key(self,state, county):
+        """Desccrition: Function to create a key value for data structure dictionaries
+        Inputs: state - string containing name of state to create key for
+                county - string containing name of county ot create key for
+        Outputs:
+                return - key value
+        """
+        key = state + ", " + county
+        return(key)
+       
     def get_cases(self,state, county):
         """Description: Accessor function to get cases data for a specified state and county
         Inputs:
@@ -134,7 +141,7 @@ class Covid19_Data(object):
         Outputs:
           return - [[date], [cases]] or None of invalid state / county
         """
-        key = state + ", " + county
+        key = self.__create_key(state, county)
         if key in self.__time_series_cases_data:
             date = self.__time_series_cases_data[key][0].copy()
             cases = self.__time_series_cases_data[key][1].copy()
@@ -142,15 +149,17 @@ class Covid19_Data(object):
         else:
             return(None)
   
-    def get_daily_new_cases(self,state, county):
+    def get_daily_new_cases(self,state, county, key):
         """Description: Accessor function to get new daily cases data for a specified state and county
         Inputs:
-            state - the state to retrieve cases data for
-            county - the county to retrieve cases data for ("ALL" for aggregate of all counties)
+            state - optional, the state to retrieve cases data for (ignored if the key value is not None)
+            county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
         Outputs:
           return - [[date], [cases]] or None of invalid state / county
         """
-        key = state + ", " + county
+        if key == None:
+            key = self.__create_key(state, county)
+
         date = []
         new_cases = []
         if key in self.__time_series_cases_data:
@@ -162,7 +171,7 @@ class Covid19_Data(object):
         else:
             return(None)
 
-    def get_state_county_keys(self):
+    def get_state_county_cases_keys(self):
         """Description: Accessor function to get new daily cases data for a specified state and county
         Inputs: None
         Outputs:
@@ -175,18 +184,36 @@ class Covid19_Data(object):
             states.append(values[0])
             counties.append(values[2].lstrip())
         return([states, counties])
+
+    def get_cases_keys(self):
+        """Description: Accessor function to get new daily cases data for a specified state and county
+        Inputs: None
+        Outputs:
+          return - [keys]
+        """
+        keys = []
+        for key in self.__time_series_cases_data:
+            keys.append(key)
+        return(keys)
         
-    def plot_cases_data(self, state_list, county_list):
+    def plot_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
-            state_list - list of states in state / county pair list
-            county_list - list of counties in state / county pair list
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
         Outpus:
             A plot window is opened
         """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = self.__create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+       
         fig, ax = plt.subplots()
-        for i in range(0, len(state_list)):
-            key_val = state_list[i] + ", " + county_list[i]
+        for key_val in key_list:
             if key_val in self.__time_series_cases_data:
                 x = self.__time_series_cases_data[key_val][0]
                 datemin = datetime.date(min(self.__time_series_cases_data[key_val][0]).year, min(self.__time_series_cases_data[key_val][0]).month, 1)
@@ -219,19 +246,26 @@ class Covid19_Data(object):
         plt.show()    
         
         
-    def plot_new_cases_data(self, state_list, county_list):
+    def plot_new_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
-            state_list - list of states in state / county pair list
-            county_list - list of counties in state / county pair list
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
         Outpus:
             A plot window is opened
         """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = self.__create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+
         fig, ax = plt.subplots()
-        for i in range(0, len(state_list)):
-            key_val = state_list[i] + ", " + county_list[i]
+        for key_val in key_list:
             if key_val in self.__time_series_cases_data:
-                [x, y] = self.get_daily_new_cases(state_list[i], county_list[i])
+                [x, y] = self.get_daily_new_cases(state=None, county=None, key=key_val)
                 datemin = datetime.date(min(x).year, min(x).month, 1)
                 datemax = datetime.date(max(x).year, max(x).month + 1, 1)
 
