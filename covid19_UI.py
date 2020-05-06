@@ -6,24 +6,31 @@ class Covid19_UI(object):
     """Description: This class is used to provide some text based UI and GUI interfaces for the DSM entry and analysis tool
     """
 # def __init__(self):
-    def choose_file():
-        allFiles = [f for f in os.listdir(".") if os.path.isfile(f)]
-        filteredFiles = []
+    def choose_file(folder):
+        all_files_and_folders = os.listdir(folder)
+        qualified_filenames = (os.path.join(folder, filename) for filename in all_files_and_folders)
+        all_files = []
+        for f in qualified_filenames:
+            if os.path.isfile(f):
+                all_files.append(f)
+            else:
+                print(f,' is not a file')
+        print(all_files)
+        filtered_files = []
         i = 0
-        for f in allFiles:
-            fileExtension = f.partition(".")[2]
-            if fileExtension == "csv":
+        for f in all_files:
+            if f.endswith(".csv"):
                 print("(", i, ")", f)
-                filteredFiles.append(f)
+                filtered_files.append(f)
                 i = i + 1
 
         choice = input("Choose file to analyze by index or type filename: ")
         try:
             index = int(choice)
-            fileName = filteredFiles[index]
+            fileName = filtered_files[index]
         except ValueError:
             fileName = choice
-        return fileName
+        return (fileName)
 
     def enter_items():
         itemEntry = True
