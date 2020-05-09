@@ -4,6 +4,9 @@ import data_grabber
 import os
 
 TIME_SERIES_PATH = '/csse_covid_19_data/csse_covid_19_time_series'
+US_DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports_us'
+DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports'
+
 choice = ''
 if os.path.isdir('./data'):
     all_subdirs = []
@@ -14,8 +17,12 @@ if os.path.isdir('./data'):
     latest_subdir = max(all_subdirs, key=os.path.getmtime)
     
     data_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + TIME_SERIES_PATH
+    us_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + US_DAILY_REPORTS_PATH
+    daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + DAILY_REPORTS_PATH
 else:
     data_folder = '.'
+    us_daily_reports_folder = None
+    daily_reports_folder = None
     
 print("Default Data Folder: ", data_folder)
 
@@ -24,14 +31,20 @@ while (choice.upper() != 'Q'):
     print("")
     print("Options")
     print("(R)etrieve Johns Hopkins Data")
-    print("(L)oad Data, Plot Total (C)onfirmed Cases, Plot (N)ew Cases, Plot Total (D)eaths")
+    print("(L)oad Time Series Data File, Load (U)S Daily Reports")
+    print("Plot Total (C)onfirmed Cases, Plot (N)ew Cases, Plot Total (D)eaths")
     print("(Q)uit")
     choice = input("What is your choice? ")
     
     if (choice.upper() == 'R'):
-        data_folder = data_grabber.retrieve_data()
-        data_folder = data_folder + TIME_SERIES_PATH
+        retrieve_path = data_grabber.retrieve_data()
+        data_folder = retrieve_path + TIME_SERIES_PATH
+        us_daily_reports_folder = retrieve_path + US_DAILY_REPORTS_PATH
+        daily_reports_folder = retrieve_path + DAILY_REPORTS_PATH
         print("Data downloaded to: ", data_folder)
+    elif (choice.upper() == 'U'):
+        if (us_daily_reports_folder != None):
+            c19_data.read_us_reports_data(us_daily_reports_folder)
     elif (choice.upper() == 'L'):
         file_name = covid19_UI.Covid19_UI.choose_file(data_folder)
         c19_data.read_time_series_cases_data(file_name)
