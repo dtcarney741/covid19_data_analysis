@@ -337,6 +337,7 @@ class Covid19_Data(object):
         Inputs:
             state - optional, the state to retrieve cases data for (ignored if the key value is not None)
             county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
+            key - optional, key in form "State, County" to retrieve cases data
         Outputs:
           return - [[date], [cases]] or None of invalid state / county
         """
@@ -353,6 +354,35 @@ class Covid19_Data(object):
                         new_case_val = self.__time_series_data["CONFIRMED CASES"][key][i] - self.__time_series_data["CONFIRMED CASES"][key][i-1]
                     else:
                         new_case_val = self.__time_series_data["CONFIRMED CASES"][key][i]
+                else:
+                    new_case_val = None
+                new_cases.append(new_case_val)
+            return([dates,new_cases])
+        else:
+            return(None)
+
+    def get_daily_new_people_tested(self,state, county, key):
+        """Description: Accessor function to get new daily people tested data for a specified state and county
+        Inputs:
+            state - optional, the state to retrieve cases data for (ignored if the key value is not None)
+            county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
+            key - optional, key in form "State, County" to retrieve people tested data
+        Outputs:
+          return - [[date], [cases]] or None of invalid state / county
+        """
+        if key == None:
+            key = self.__create_key(state, county)
+
+        dates = []
+        new_cases = []
+        if key in self.__time_series_data["PEOPLE TESTED"]:
+            for i in range (1, len(self.__time_series_dates)):
+                dates.append(self.__time_series_dates[i])
+                if self.__time_series_data["PEOPLE TESTED"][key][i] != None:
+                    if self.__time_series_data["PEOPLE TESTED"][key][i-1] != None:
+                        new_case_val = self.__time_series_data["PEOPLE TESTED"][key][i] - self.__time_series_data["PEOPLE TESTED"][key][i-1]
+                    else:
+                        new_case_val = self.__time_series_data["PEOPLE TESTED"][key][i]
                 else:
                     new_case_val = None
                 new_cases.append(new_case_val)
@@ -534,13 +564,22 @@ class Covid19_Data(object):
 
         plt.show()    
         
-    def plot_incident_rate_data(self, key_list):
+    def plot_incident_rate_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
             key_list - optional, list of key values ("State, County") to plot data for
         Outpus:
             A plot window is opened
         """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = self.__create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+
         fig, ax = plt.subplots()
         for key_val in key_list:
             if key_val in self.__time_series_data["INCIDENT RATE"]:
@@ -570,6 +609,167 @@ class Covid19_Data(object):
         
         fig.suptitle('Covid-19 Incident Rate Plot')
 
+        # rotates and right aligns the x labels, and moves the bottom of the
+        # axes up to make room for them
+        fig.autofmt_xdate()
+
+        plt.show()    
+
+    def plot_people_tested_data(self, state_list, county_list, key_list):
+        """Description: function to create an XY plot of specified state/county pairs
+        Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
+        Outpus:
+            A plot window is opened
+        """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = self.__create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+
+        fig, ax = plt.subplots()
+        for key_val in key_list:
+            if key_val in self.__time_series_data["INCIDENT RATE"]:
+                x = self.__time_series_dates
+                datemin = datetime.date(x[0].year, x[0].month, 1)
+                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+
+                y = self.__time_series_data["PEOPLE TESTED"][key_val].copy()
+            else:
+                print("invalid state / county pair value: ", key_val)
+                return(False)
+            ax.plot(x,y, marker='o', label=key_val)
+
+        # format the ticks
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
+#        ax.xaxis.set_minor_locator(mdates.DayLocator())
+        ax.set_xlim(datemin, datemax)
+
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Number of People Tested')
+        # format the coords message box
+        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
+        ax.grid(True)
+        
+        ax.legend()
+        
+        fig.suptitle('Covid-19 People Tested Plot')
+
+        # rotates and right aligns the x labels, and moves the bottom of the
+        # axes up to make room for them
+        fig.autofmt_xdate()
+
+        plt.show()    
+
+    def plot_new_people_tested_data(self, state_list, county_list, key_list):
+        """Description: function to create an XY plot of specified state/county pairs
+        Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
+        Outpus:
+            A plot window is opened
+        """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = self.__create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+
+        fig, ax = plt.subplots()
+        for key_val in key_list:
+            if key_val in self.__time_series_data["PEOPLE TESTED"]:
+                [x, y] = self.get_daily_new_people_tested(state=None, county=None, key=key_val)
+                datemin = datetime.date(x[0].year, x[0].month, 1)
+                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+
+            else:
+                print("invalid state / county pair value: ", key_val)
+                return(False)
+            ax.plot(x,y, marker='o', label=key_val)
+
+        # format the ticks
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
+#        ax.xaxis.set_minor_locator(mdates.DayLocator())
+        ax.set_xlim(datemin, datemax)
+
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Daily Number of People Tested')
+        # format the coords message box
+        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
+        ax.grid(True)
+        
+        ax.legend()
+
+        fig.suptitle('Covid-19 Daily New People Tested Plot')
+        
+        # rotates and right aligns the x labels, and moves the bottom of the
+        # axes up to make room for them
+        fig.autofmt_xdate()
+
+        plt.show()    
+
+    def plot_daily_ratio_cases_to_people_tested_data(self, state_list, county_list, key_list):
+        """Description: function to create an XY plot of specified state/county pairs
+        Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
+        Outpus:
+            A plot window is opened
+        """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = self.__create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+
+        fig, ax = plt.subplots()
+        for key_val in key_list:
+            if key_val in self.__time_series_data["PEOPLE TESTED"]:
+                [x, cases] = self.get_daily_new_cases(state=None, county=None, key=key_val)
+                [x, tested] = self.get_daily_new_people_tested(state=None, county=None, key=key_val)
+                ratio = []
+                for i in range(0,len(x)):
+                    if cases[i] == None or tested[i] == None:
+                        ratio.append(None)
+                    elif tested[i] == 0:
+                        ratio.append(None)
+                    else:
+                        ratio.append(cases[i]/tested[i])
+                    
+                datemin = datetime.date(x[0].year, x[0].month, 1)
+                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+
+            else:
+                print("invalid state / county pair value: ", key_val)
+                return(False)
+            ax.plot(x,ratio, marker='o', label=key_val)
+
+        # format the ticks
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
+#        ax.xaxis.set_minor_locator(mdates.DayLocator())
+        ax.set_xlim(datemin, datemax)
+
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Daily Ratio of Confirmed Cases to People Tested')
+        # format the coords message box
+        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
+        ax.grid(True)
+        
+        ax.legend()
+
+        fig.suptitle('Covid-19 Percentage of Positive Test Results')
+        
         # rotates and right aligns the x labels, and moves the bottom of the
         # axes up to make room for them
         fig.autofmt_xdate()

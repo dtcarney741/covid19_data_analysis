@@ -32,7 +32,8 @@ while (choice.upper() != 'Q'):
     print("Options")
     print("(R)etrieve Johns Hopkins Data")
     print("(L)oad Time Series Data File, Load (U)S Daily Reports")
-    print("Plot Total (C)onfirmed Cases, Plot (N)ew Cases, Plot Total (D)eaths, Plot (I)ncident Rate")
+    print("Plot Total (C)onfirmed Cases, Plot (N)ew Daily Cases, Plot Total (D)eaths, Plot (I)ncident Rate")
+    print("Plot (P)eople Tested, Plot New Daily P(E)ople Tested, Plot Daily R(A)tio of Confirmed Cases to People Tested")
     print("(Q)uit")
     choice = input("What is your choice? ")
     
@@ -71,4 +72,16 @@ while (choice.upper() != 'Q'):
     elif (choice.upper() == 'I'):
         key_list = c19_data.get_incident_rate_keys()
         selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Incident Rate", "Select states / counties for plot", key_list)
-        c19_data.plot_incident_rate_data(key_list = selected_keys)
+        c19_data.plot_incident_rate_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'P'):
+        key_list = c19_data.get_people_tested_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot People Tested", "Select states / counties for plot", key_list)
+        c19_data.plot_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'E'):
+        key_list = c19_data.get_people_tested_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily New People Tested", "Select states / counties for plot", key_list)
+        c19_data.plot_new_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'A'):
+        key_list = c19_data.get_people_tested_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily Ratio of Confirmed Cases to People Tested", "Select states / counties for plot", key_list)
+        c19_data.plot_daily_ratio_cases_to_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
