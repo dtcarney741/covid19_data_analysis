@@ -49,6 +49,14 @@ class Covid19_UI(object):
         for state in states:
             if state not in state_list:
                 state_list.append(state)
+        print("Confirmed Cases Data Dictionary States")
+        print(state_list)
+        [states, counties] = c19_data.get_state_county_incident_rate_keys()
+        state_list = []
+        for state in states:
+            if state not in state_list:
+                state_list.append(state)
+        print("Incident Rate Data Dictionary States")
         print(state_list)
             
     def get_integer_input(promptString):

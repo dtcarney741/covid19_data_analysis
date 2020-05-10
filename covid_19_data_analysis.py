@@ -32,7 +32,7 @@ while (choice.upper() != 'Q'):
     print("Options")
     print("(R)etrieve Johns Hopkins Data")
     print("(L)oad Time Series Data File, Load (U)S Daily Reports")
-    print("Plot Total (C)onfirmed Cases, Plot (N)ew Cases, Plot Total (D)eaths")
+    print("Plot Total (C)onfirmed Cases, Plot (N)ew Cases, Plot Total (D)eaths, Plot (I)ncident Rate")
     print("(Q)uit")
     choice = input("What is your choice? ")
     
@@ -42,12 +42,22 @@ while (choice.upper() != 'Q'):
         us_daily_reports_folder = retrieve_path + US_DAILY_REPORTS_PATH
         daily_reports_folder = retrieve_path + DAILY_REPORTS_PATH
         print("Data downloaded to: ", data_folder)
+
     elif (choice.upper() == 'U'):
         if (us_daily_reports_folder != None):
-            c19_data.read_us_reports_data(us_daily_reports_folder)
+            if c19_data.read_us_daily_reports_data(us_daily_reports_folder):
+                print("US daily reports files read in successfully")
+            else:
+                print("ERROR: US daily report files not read in successfully")
+        else:
+            print("ERROR: Invalid US daily reports directory, US daily report files not read in successfully")
+
     elif (choice.upper() == 'L'):
         file_name = covid19_UI.Covid19_UI.choose_file(data_folder)
-        c19_data.read_time_series_cases_data(file_name)
+        if c19_data.read_time_series_cases_data(file_name):
+            print("Time series data file read in successfully")
+        else:
+            print("ERROR: time series data file not read in succesfully")
     elif (choice.upper() == "DEBUG1"):
         covid19_UI.Covid19_UI.print_state_names(c19_data)
     elif (choice.upper() == 'C'):
@@ -55,6 +65,10 @@ while (choice.upper() != 'Q'):
         selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Confirmed Cases", "Select states / counties for plot", key_list)
         c19_data.plot_cases_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'N'):
-        key_list = c19_data.get_cases_keys()
+        key_list = c19_data.get_incident_rate_keys()
         selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily New Cases", "Select states / counties for plot", key_list)
         c19_data.plot_new_cases_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'I'):
+        key_list = c19_data.get_incident_rate_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Incident Rate", "Select states / counties for plot", key_list)
+        c19_data.plot_incident_rate_data(key_list = selected_keys)
