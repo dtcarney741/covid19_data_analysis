@@ -129,8 +129,8 @@ class Covid19_Data(object):
         for filename in all_files:
             filename_str_partition = filename[1].partition('.')
             if filename_str_partition[2].upper() == 'CSV':
-                date = datetime.datetime.strptime(filename_str_partition[0],'%m-%d-%Y')
-                print(filename[1], " - ", date)
+                file_date_val = datetime.datetime.strptime(filename_str_partition[0],'%m-%d-%Y')
+                print(filename[1], " - ", file_date_val)
                 
                 csv_file_obj = open(filename[0])
                 reader_obj = csv.reader(csv_file_obj)
@@ -175,7 +175,7 @@ class Covid19_Data(object):
                             self.__time_series_data["INCIDENT RATE"][key] = rate
                             
                         # add data to the apprpriate entry in the dictionary for state/county and aggregate for whole state
-                        i = self.__get_date_list_index(date)
+                        i = self.__get_date_list_index(file_date_val)
                         try:
                             cases = int(row[self.__us_data_field_locations["CONFIRMED_CASES_COL"]])
                         except:
@@ -461,7 +461,32 @@ class Covid19_Data(object):
         for key in self.__time_series_data["INCIDENT RATE"]:
             keys.append(key)
         return(keys)
-       
+
+    def get_dates(self):
+        """Description: Accessor function to get list of dates for data points
+        Inputs: None
+        Outputs:
+          return - [dates]
+        """
+        dates = []
+        for date in self.__time_series_dates:
+            dates.append(date)
+        return(dates)
+
+    def get_people_tested(self,state,county,key):
+        """Description: Accessor function to get list of dates for data points
+        Inputs: None
+        Outputs:
+          return - [dates]
+        """
+        if key == None:
+            key = self.__create_key(state,county)
+
+        data = []
+        for val in self.__time_series_data["PEOPLE TESTED"][key]:
+            data.append(val)
+        return(data)
+      
     def plot_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 

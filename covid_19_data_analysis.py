@@ -61,12 +61,17 @@ while (choice.upper() != 'Q'):
             print("ERROR: time series data file not read in succesfully")
     elif (choice.upper() == "DEBUG1"):
         covid19_UI.Covid19_UI.print_state_names(c19_data)
+    elif (choice.upper() == "DEBUG2"):
+        dates = c19_data.get_dates()
+        tested = c19_data.get_people_tested(state="Wisconsin", county="ALL", key=None)
+        for i in range(0, len(dates)):
+            print(dates[i], tested[i])
     elif (choice.upper() == 'C'):
         key_list = c19_data.get_cases_keys()
         selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Confirmed Cases", "Select states / counties for plot", key_list)
         c19_data.plot_cases_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'N'):
-        key_list = c19_data.get_incident_rate_keys()
+        key_list = c19_data.get_cases_keys()
         selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily New Cases", "Select states / counties for plot", key_list)
         c19_data.plot_new_cases_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'I'):
