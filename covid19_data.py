@@ -4,6 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import os
+import pprint
+from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
+import statsmodels.api as sm
+import warnings
 
 class Covid19_Data(object):  
     
@@ -486,7 +491,198 @@ class Covid19_Data(object):
         for val in self.__time_series_data["PEOPLE TESTED"][key]:
             data.append(val)
         return(data)
-      
+    
+    
+    def exponential_func(cls, x, a, b, c):
+        return a * (b**x) + c
+    
+    
+    def detect_outliers(cls, dataset, threshold=2):
+        outliers=[]
+
+        mean = np.mean(dataset)
+        stdev = np.std(dataset)
+        
+        for point in dataset:
+            z_score = (point - mean) / stdev
+            if abs(z_score) > threshold:
+                outliers.append(point)
+                
+        return outliers
+        
+        
+    def fit_curve(cls, x, y, return_all=False):
+        if len(x) != len(y):
+            raise ValueError("Length of x and y data sets are not equal: ", len(x), "vs.", len(y))
+        
+        # curve fit method 1 - Exponential
+        exp_accuracy = 0
+        exp_data = None
+        print(x, y)
+        try:
+            exp_fit, pcov = curve_fit(cls.exponential_func, x, y)
+            exp_accuracy = 0
+            # calc accuracy
+            for i in range(len(x)):
+                exp_val = cls.exponential_func(i, *exp_fit)
+                try:
+                    data_val = y[i]
+                except IndexError:
+                    print(y, i, len(y), len(x))
+                exp_accuracy += abs(exp_val - data_val)
+                
+            exp_data = cls.exponential_func(x, *exp_fit)
+        
+        except RuntimeError:
+            exp_accuracy = 99999999999999999999
+            exp_data = x
+        
+        # curve fit method 2 - Polynomial
+        poly_fits = []
+        poly_fits_accuracy = []
+        for i in range(20):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                try:
+                    fit = np.poly1d(np.polyfit(x, y, i))
+                    poly_fits.append(fit)
+                except np.RankWarning:
+                    pass
+            
+            # calc accuracy
+            fit_accuracy = 0
+            for j in range(len(x)):
+                poly_val = fit(j)
+                data_val = y[j]
+                fit_accuracy += abs(poly_val - data_val)
+            poly_fits_accuracy.append(fit_accuracy)
+        index = poly_fits_accuracy.index(min(poly_fits_accuracy))
+        poly_fit = poly_fits[index]
+        poly_accuracy = poly_fits_accuracy[index]                     
+        
+        # curve fit method 3 - LOWESS + interpolation
+        lowess = sm.nonparametric.lowess(y, x, frac=.1)
+        lowess_x = list(zip(*lowess))[0]
+        lowess_y = list(zip(*lowess))[1]
+        f = interp1d(lowess_x, lowess_y, bounds_error=False)  # interpolate
+        lowess_y = f(x)
+        #calc accuracy
+        lowess_accuracy = 0
+        for i in range(len(x)):
+            lowess_val = lowess_y[i]
+            data_val = y[i]
+            lowess_accuracy += abs(lowess_val - data_val)  
+            
+        print(exp_accuracy, poly_accuracy, lowess_accuracy)
+        # compare accuracy of each method and return method y data with lowest
+        # accuracy number
+        # all paramter can be set for debugging purposes
+        
+        poly_data = poly_fit(x)
+        lowess_data = lowess_y
+        if return_all:
+            return exp_data, poly_data, lowess_data, exp_accuracy, poly_accuracy, lowess_accuracy
+        elif exp_accuracy == min([exp_accuracy, poly_accuracy, lowess_accuracy]):
+            return exp_data, exp_accuracy
+        elif poly_accuracy == min([exp_accuracy, poly_accuracy, lowess_accuracy]):
+            return poly_data, poly_accuracy
+        else:
+            return lowess_data, lowess_accuracy
+    
+    
+    def get_derivative(cls, x_dataset, y_dataset, iters=5, start_threshold=3, threshold_stepdown=.2):
+        y1, y2, y3, a1, a2, a3 = cls.fit_curve(x_dataset, y_dataset, return_all=True)
+        curves = {
+            "normal_data":[y_dataset],
+            "exp":[y1, a1],
+            "poly":[y2, a2],
+            "lowess":[y3, a3]
+            }
+        
+        dx = 1 # dx is 1 because the interval is always 1 day
+        dy1 = np.diff(curves["normal_data"][0]) / dx
+        dy2 = np.diff(curves["exp"][0]) / dx
+        dy3 = np.diff(curves["poly"][0]) / dx
+        dy4 = np.diff(curves["lowess"][0]) / dx
+        derivatives = {
+            "normal_data":{
+                "iter0":[dy1, list(range(len(y_dataset)))[:-1], cls.detect_outliers(dy1)]
+                },
+            "exp":{
+                "iter0":[dy2, list(range(len(y_dataset)))[:-1], cls.detect_outliers(dy2)]
+                },
+            "poly":{
+                "iter0":[dy3, list(range(len(y_dataset)))[:-1], cls.detect_outliers(dy3)]
+                },
+            "lowess":{
+                "iter0":[dy4, list(range(len(y_dataset)))[:-1], cls.detect_outliers(dy4)]
+                },
+            }
+        
+        for i in range(iters):
+            # pop outliers from each of the smoothed curves
+            iter_entry = "iter" + str(i)
+            x = derivatives["normal_data"][iter_entry][1]
+            y = derivatives["normal_data"][iter_entry][0]
+            outliers = cls.detect_outliers(y, threshold=start_threshold - (i * threshold_stepdown))
+            new_x = []
+            new_y = []
+            for index, point in enumerate(y):
+                if point not in outliers:
+                    new_x.append(x[index])
+                    new_y.append(point)
+            dy, _ = cls.fit_curve(new_x, new_y)
+            entry = "iter" + str(i + 1)
+            derivatives["normal_data"].update({entry:[dy, new_x, outliers]})
+
+
+            iter_entry = "iter" + str(i)
+            x = derivatives["exp"][iter_entry][1]
+            y = derivatives["exp"][iter_entry][0]
+            outliers = cls.detect_outliers(y, threshold=start_threshold - (i * threshold_stepdown))
+            new_x = []
+            new_y = []
+            for index, point in enumerate(y):
+                if point not in outliers:
+                    new_x.append(x[index])
+                    new_y.append(point)
+            dy, _ = cls.fit_curve(new_x, new_y)
+            entry = "iter" + str(i + 1)
+            derivatives["exp"].update({entry:[dy, new_x, outliers]})
+
+                    
+            iter_entry = "iter" + str(i)
+            x = derivatives["poly"][iter_entry][1]
+            y = derivatives["poly"][iter_entry][0]
+            outliers = cls.detect_outliers(y, threshold=start_threshold - (i * threshold_stepdown))
+            new_x = []
+            new_y = []
+            for index, point in enumerate(y):
+                if point not in outliers:
+                    new_x.append(x[index])
+                    new_y.append(point)
+            dy, _ = cls.fit_curve(new_x, new_y)
+            entry = "iter" + str(i + 1)
+            derivatives["poly"].update({entry:[dy, new_x, outliers]})
+                            
+                    
+            iter_entry = "iter" + str(i)
+            x = derivatives["lowess"][iter_entry][1]
+            y = derivatives["lowess"][iter_entry][0]
+            outliers = cls.detect_outliers(y, threshold=start_threshold - (i * threshold_stepdown))
+            new_x = []
+            new_y = []
+            for index, point in enumerate(y):
+                if point not in outliers:
+                    new_x.append(x[index])
+                    new_y.append(point)
+            dy, _ = cls.fit_curve(new_x, new_y)
+            entry = "iter" + str(i + 1)
+            derivatives["lowess"].update({entry:[dy, new_x, outliers]})
+                    
+        return curves, derivatives
+    
+        
     def plot_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
@@ -503,7 +699,7 @@ class Covid19_Data(object):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
        
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(12, 4)
         for key_val in key_list:
             if key_val in self.__time_series_data["CONFIRMED CASES"]:
                 x = self.__time_series_dates
@@ -511,24 +707,46 @@ class Covid19_Data(object):
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
                 y = self.__time_series_data["CONFIRMED CASES"][key_val]
+                
+                curves, derivatives = self.get_derivative(range(len(y)), y, iters=10, start_threshold=3, threshold_stepdown=.25)
+                for col, dataset in enumerate(list(derivatives.values())):
+                    pprint.pprint(dataset)
+                    for row, iteration_dataset in enumerate(list(dataset.values())):
+                        pprint.pprint(iteration_dataset)
+                        x_values = []
+                        for value in iteration_dataset[1]: # x values
+                            x_values.append(x[value])
+                        print(row + 1, col)
+                        ax[row+1, col].plot(x_values, iteration_dataset[0])
+                        
+                ax[0, 0].plot(x, curves["normal_data"][0], marker='o', label=key_val)
+                ax[0, 1].plot(x, curves["exp"][0], marker='o', label=key_val)
+                ax[0, 2].plot(x, curves["poly"][0], marker='o', label=key_val)
+                ax[0, 3].plot(x, curves["lowess"][0], marker='o', label=key_val)
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            ax.plot(x,y, marker='o', label=key_val)
+
+            
+            # ax[1, 0].plot(x[:-1], smooth_derivatives[0], marker='o', label=key_val)
+            # ax[1, 1].plot(x[:-1], smooth_derivatives[1], marker='o', label=key_val)
+            # ax[1, 2].plot(x[:-1], smooth_derivatives[2], marker='o', label=key_val)
+            # ax[1, 3].plot(x[:-1], smooth_derivatives[3], marker='o', label=key_val)
+            
 
         # format the ticks
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
+        ax[0, 0].xaxis.set_major_locator(mdates.MonthLocator())
+        ax[0, 0].xaxis.set_major_formatter(mdates.DateFormatter('%m'))
 #        ax.xaxis.set_minor_locator(mdates.DayLocator())
-        ax.set_xlim(datemin, datemax)
+        ax[0, 0].set_xlim(datemin, datemax)
 
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Confirmed Cases')               
+        ax[0, 0].set_xlabel('Date')
+        ax[0, 0].set_ylabel('Confirmed Cases')               
         # format the coords message box
-        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
-        ax.grid(True)
+        ax[0, 0].format_xdata = mdates.DateFormatter('%m-%d-%Y')
+        ax[0, 0].grid(True)
         
-        ax.legend()
+        ax[0, 0].legend()
 
         fig.suptitle('Covid-19 Confirmed Cases Plot')
         
