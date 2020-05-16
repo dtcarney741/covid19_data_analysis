@@ -386,7 +386,9 @@ class Covid19_Data(object):
                     if self.__time_series_data["PEOPLE TESTED"][key][i-1] != None:
                         new_case_val = self.__time_series_data["PEOPLE TESTED"][key][i] - self.__time_series_data["PEOPLE TESTED"][key][i-1]
                     else:
-                        new_case_val = self.__time_series_data["PEOPLE TESTED"][key][i]
+                        # first day that people tested data appears should be set to 0 in new daily tested data because otherwise it would be a large jump
+                        # of all the testing done up to that point, not just on that day;  the actual amount tested on this day is unknown
+                        new_case_val = 0
                 else:
                     new_case_val = None
                 new_cases.append(new_case_val)
