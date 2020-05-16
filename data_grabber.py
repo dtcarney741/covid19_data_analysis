@@ -1,8 +1,8 @@
 from datetime import date
+import os
 import shutil
 import subprocess
 import zipfile
-import os
 
 def retrieve_data():
     """

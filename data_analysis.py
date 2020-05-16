@@ -5,18 +5,54 @@ Created on Wed May 13 09:58:32 2020
 
 @author: aiden
 """
-import numpy as np
-from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
+import numpy as np
 import statsmodels.api as sm
 import warnings
 
 
 def exponential_func(x, a, b, c):
-        return a * (b**x) + c
+    """
+    Calculates functional value of an exponential equation
+
+    Parameters
+    ----------
+    x : int
+        variable.
+    a : int
+        a constant.
+    b : int
+        a constant.
+    c : int
+        a constant.
+
+    Returns
+    -------
+    float
+        The functional value of the exponential equation.
+
+    """
+    return a * (b**x) + c
     
     
 def detect_outliers(dataset, threshold=2):
+    """
+    Calculates outliers based on the z score algorithm
+
+    Parameters
+    ----------
+    dataset : list
+        dataset to find outliers in.
+    threshold : int, optional
+        The constant for with the z score must be lower than. The default is 2.
+
+    Returns
+    -------
+    outliers : list
+        A list of the outliers.
+
+    """
     outliers=[]
     mean = np.mean(dataset)
     stdev = np.std(dataset)
@@ -31,6 +67,38 @@ def detect_outliers(dataset, threshold=2):
         
         
 def fit_curve(x, y, return_all=False):
+    """
+    Smooths a dataset through various methods. Currently supported modes are
+    exponential, polynomial, and lowess. Accuracy score is calculated for each
+    method by taking the distance between the new value and the original value.
+    As such a lower accuracy number means that the data is closer to the original
+    values.
+    TODO: accuracy calculation is crude, update with something more robust
+
+    Parameters
+    ----------
+    x : list of type float
+        The x dataset.
+    y : list of type float
+        the y dataset.
+    return_all : bool, optional
+        Return as much data as possible. Intedned for debugging purposes. 
+        The default is False.
+
+    Raises
+    ------
+    IndexError
+        Raised when datasets are not equal length.
+
+    Returns
+    -------
+    various
+        if return_all == True then there are 6 returns of type int.
+        otherwise the y_dataset (which has been smoothed) and the accuracy
+        of that dataset to the original is returned. The dataset returned accuracy
+        number is lowest.
+
+    """
     if len(x) != len(y):
         raise IndexError("Length of x and y data sets are not equal: ", len(x), "vs.", len(y))
     
@@ -110,7 +178,39 @@ def fit_curve(x, y, return_all=False):
     
     
 def get_derivative(x_dataset, y_dataset, initial_smoothing=0, iters=5, start_threshold=3, threshold_stepdown=.2, debug=False):
+    """
+    Calculates and smooths a derivative based on given parameters. Algorithm
+    works by doing an initial smoothing then iterating through removing outliers
+    and smoothing.
 
+    Parameters
+    ----------
+    x_dataset : list of type float
+        the x axis data.
+    y_dataset : list of type float
+        the y axis data.
+    initial_smoothing : int, optional
+        If the data is to be smoothed before algorithm is applied. The default is 0.
+    iters : int, optional
+        The amount of iterations of the algorithm to perform. The default is 5.
+    start_threshold : float, optional
+        The constant for which the z score must be less than with the outlier
+        calculation algorithm. The default is 3.
+    threshold_stepdown : float, optional
+        The amount to decrease the threshold constant after each iteration.
+        The default is .2.
+    debug : bool, optional
+        If true, then all data calculated by algorithm is returned.
+        The default is False.
+
+    Returns
+    -------
+    list of type float
+        x dataset of derivative.
+    list of type float
+        y dataset of derivative.
+
+    """
     y1, y2, y3, a1, a2, a3 = fit_curve(x_dataset, y_dataset, return_all=True)
     curves = {
         "normal_data":[y_dataset, x_dataset],
