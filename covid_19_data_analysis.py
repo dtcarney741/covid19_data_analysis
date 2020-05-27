@@ -1,7 +1,10 @@
+import colorama
+import os
+
 import covid19_data
 import covid19_UI
 import data_grabber
-import os
+
 
 TIME_SERIES_PATH = '/csse_covid_19_data/csse_covid_19_time_series'
 US_DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports_us'
@@ -28,14 +31,16 @@ print("Default Data Folder: ", data_folder)
 
 c19_data = covid19_data.Covid19_Data()
 while (choice.upper() != 'Q'):
+    c = colorama.Fore.YELLOW
+    r = colorama.Fore.RESET
     print("")
     print("Options")
-    print("(R)etrieve Johns Hopkins Data")
-    print("(L)oad Time Series Data File, Load (U)S Daily Reports")
-    print("Plot Total (C)onfirmed Cases, Plot (N)ew Daily Cases, Plot Total (D)eaths, Plot (I)ncident Rate")
-    print("Plot (P)eople Tested, Plot New Daily P(E)ople Tested, Plot Daily R(A)tio of Confirmed Cases to People Tested")
-    print("Plot (M)y Saved Plots")
-    print("(Q)uit")
+    print(c + "(R)" + r + "etrieve Johns Hopkins Data")
+    print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports")
+    print("Plot Total " + c + "(C)" + r + "onfirmed Cases, Plot " + c + "(N)" + r + "ew Daily Cases, Plot Total " + c + "(D)" + r + "eaths, Plot " + c + "(I)" + r + "ncident Rate")
+    print("Plot " + c + "(P)" + r + "eople Tested, Plot New Daily P" + c + "(E)" + r + "ople Tested, Plot Daily R" + c + "(A)" + r + "tio of Confirmed Cases to People Tested")
+    print("Plot " + c + "(M)" + r + "y Saved Plots")
+    print(c + "(Q)" + r + "uit")
     choice = input("What is your choice? ")
     
     if (choice.upper() == 'R'):

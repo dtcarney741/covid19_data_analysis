@@ -1,11 +1,9 @@
 import csv
 import datetime
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import os
-import pprint
 
-import data_analysis
 import matplotlib_gui
 
 
@@ -99,10 +97,10 @@ class Covid19_Data(object):
                 i = 0
                 for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
                     j = self.__get_date_list_index(date_list[i])
-                    self.__time_series_data["CONFIRMED CASES"][key][j] = int(row[col])
+                    self.__time_series_data["CONFIRMED CASES"][key][j] = int(float(row[col]))
                     
                     if self.__time_series_data["CONFIRMED CASES"][agg_key][j] == None:
-                        self.__time_series_data["CONFIRMED CASES"][agg_key][j] = int(row[col])
+                        self.__time_series_data["CONFIRMED CASES"][agg_key][j] = int(float(row[col]))
                     else:
                         self.__time_series_data["CONFIRMED CASES"][agg_key][j] = self.__time_series_data["CONFIRMED CASES"][agg_key][j] + int(row[col])
 
@@ -519,10 +517,13 @@ class Covid19_Data(object):
         x_datasets = []
         y_datasets = []
         labels = []
-        # fig, ax = plt.subplots(12, 4)
+
         for key_val in key_list:
             if key_val in self.__time_series_data["CONFIRMED CASES"]:
                 x = self.__time_series_dates
+                for i in x:
+                    print(i)
+                
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
                 start_dates.append(datemin)
@@ -533,22 +534,6 @@ class Covid19_Data(object):
                 y_datasets.append(y)
                 labels.append(key_val)
 
-                
-                # curves, derivatives = data_analysis.get_derivative(range(len(y)), y, iters=10, start_threshold=3, threshold_stepdown=.25)
-                # for col, dataset in enumerate(list(derivatives.values())):
-                #     pprint.pprint(dataset)
-                #     for row, iteration_dataset in enumerate(list(dataset.values())):
-                #         pprint.pprint(iteration_dataset)
-                #         x_values = []
-                #         for value in iteration_dataset[1]: # x values
-                #             x_values.append(x[value])
-                #         print(row + 1, col)
-                #         ax[row+1, col].plot(x_values, iteration_dataset[0])
-                        
-                # ax[0, 0].plot(x, curves["normal_data"][0], marker='o', label=key_val)
-                # ax[0, 1].plot(x, curves["exp"][0], marker='o', label=key_val)
-                # ax[0, 2].plot(x, curves["poly"][0], marker='o', label=key_val)
-                # ax[0, 3].plot(x, curves["lowess"][0], marker='o', label=key_val)
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
@@ -574,39 +559,12 @@ class Covid19_Data(object):
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
 
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Y")
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases")
         gui.new_figure(1, 1)
-        print(labels)
+
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while True:
-            gui.mainloop()
-            # ax[1, 0].plot(x[:-1], smooth_derivatives[0], marker='o', label=key_val)
-            # ax[1, 1].plot(x[:-1], smooth_derivatives[1], marker='o', label=key_val)
-            # ax[1, 2].plot(x[:-1], smooth_derivatives[2], marker='o', label=key_val)
-            # ax[1, 3].plot(x[:-1], smooth_derivatives[3], marker='o', label=key_val)
-            
+        while gui.mainloop(): pass
 
-        # format the ticks
-#         ax[0, 0].xaxis.set_major_locator(mdates.MonthLocator())
-#         ax[0, 0].xaxis.set_major_formatter(mdates.DateFormatter('%m'))
-# #        ax.xaxis.set_minor_locator(mdates.DayLocator())
-#         ax[0, 0].set_xlim(datemin, datemax)
-
-#         ax[0, 0].set_xlabel('Date')
-#         ax[0, 0].set_ylabel('Confirmed Cases')               
-#         # format the coords message box
-#         ax[0, 0].format_xdata = mdates.DateFormatter('%m-%d-%Y')
-#         ax[0, 0].grid(True)
-        
-#         ax[0, 0].legend()
-
-#         fig.suptitle('Covid-19 Confirmed Cases Plot')
-        
-#         # rotates and right aligns the x labels, and moves the bottom of the
-#         # axes up to make room for them
-#         fig.autofmt_xdate()
-
-        plt.show()    
         
         
     def plot_new_cases_data(self, state_list, county_list, key_list):

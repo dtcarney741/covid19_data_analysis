@@ -1,6 +1,7 @@
 import easygui as eg
-import covid19_data
 import os
+
+import covid19_data
  
 class Covid19_UI(object):
     """Description: This class is used to provide some text based UI and GUI interfaces for the DSM entry and analysis tool

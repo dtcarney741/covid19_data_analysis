@@ -20,7 +20,7 @@ class ConfigGUI:
     """
     class with widgets for getting configuration for smoothing a derivative curve
     """
-    def __init__(self, smoothing, iterations, threshold, stepdown, window_name="dy/dx Configuration"):
+    def __init__(self, window_name="dy/dx Configuration", **kwargs):
         self.root = tk.Tk()
         self.root.geometry("330x335")
         self.root.columnconfigure(0, weight=1)
@@ -29,18 +29,17 @@ class ConfigGUI:
         self.break_loop = False
 
         self.config_btns = []
-        self.smoothing_btns = []
+        self.window_slider = None
+        self.polyorder_slider = None
         self.iter_slider = None
         self.threshold_slider = None
         self.stepdown_slider = None
 
         self.config_var = tk.IntVar(self.root)
-        self.smoothing_var = tk.IntVar(self.root)
 
-
-        tk.Label(self.root, text="Configuration", font=("TimesNewRoman", 12)).grid(row=0, column=0, sticky="w")
-        self.config_btns.append(tk.Radiobutton(self.root, text="Auto", variable=self.config_var, value=0))
-        self.config_btns.append(tk.Radiobutton(self.root, text="Manual", variable=self.config_var, value=1))
+        tk.Label(self.root, text="Smooth Data", font=("TimesNewRoman", 12)).grid(row=0, column=0, sticky="w")
+        self.config_btns.append(tk.Radiobutton(self.root, text="No", variable=self.config_var, value=0))
+        self.config_btns.append(tk.Radiobutton(self.root, text="Yes", variable=self.config_var, value=1))
 
         for i, btn in enumerate(self.config_btns):
             btn.grid(row=i, column=1, sticky="w")
@@ -49,38 +48,39 @@ class ConfigGUI:
 
         tk.Label(self.root, text="").grid(row=2, column=0, sticky="w")
 
+        tk.Label(self.root, text="Filter Window Length", font=("TimesNewRoman", 12)).grid(row=3, column=0, sticky="w")
+        self.window_slider = tk.Scale(self.root, from_=0, to=15, orient="horizontal")
+        self.window_slider.grid(row=3, column=1, sticky="w")
+        self.window_slider.set(kwargs.get("window_length", 5))
 
-        tk.Label(self.root, text="Initial Smoothing", font=("TimesNewRoman", 12)).grid(row=3, column=0, sticky="w")
-        self.smoothing_btns.append(tk.Radiobutton(self.root, text="Auto", variable=self.smoothing_var, value=0))
-        self.smoothing_btns.append(tk.Radiobutton(self.root, text="None", variable=self.smoothing_var, value=1))
-        self.smoothing_btns.append(tk.Radiobutton(self.root, text="Exponential", variable=self.smoothing_var, value=2))
-        self.smoothing_btns.append(tk.Radiobutton(self.root, text="Polynomial", variable=self.smoothing_var, value=3))
-        self.smoothing_btns.append(tk.Radiobutton(self.root, text="LOWESS", variable=self.smoothing_var, value=4))
 
-        for i, btn in enumerate(self.smoothing_btns):
-            btn.grid(row=i + 3, column=1, sticky="w")
-        self.smoothing_btns[smoothing].select()
+        tk.Label(self.root, text="").grid(row=5, column=0, sticky="w")
+
+        tk.Label(self.root, text="Filter Polynomial Degree", font=("TimesNewRoman", 12)).grid(row=6, column=0, sticky="w")
+        self.polyorder_slider = tk.Scale(self.root, from_=0, to=15, orient="horizontal")
+        self.polyorder_slider.grid(row=6, column=1, sticky="w")
+        self.polyorder_slider.set(kwargs.get("polyorder", 5))
 
         tk.Label(self.root, text="").grid(row=9, column=0 , sticky="w")
 
         tk.Label(self.root, text="Iterations", font=("TimesNewRoman", 12)).grid(row=10, column=0, sticky="w")
         self.iter_slider = tk.Scale(self.root, from_=0, to=10, orient="horizontal")
         self.iter_slider.grid(row=10, column=1, sticky="w")
-        self.iter_slider.set(iterations)
+        self.iter_slider.set(kwargs.get("iters", 5))
 
         tk.Label(self.root, text="").grid(row=11, column=0, sticky="w")
 
         tk.Label(self.root, text="Outlier Threshold", font=("TimesNewRoman", 12)).grid(row=12, column=0, sticky="w")
         self.threshold_slider = tk.Scale(self.root, from_=0, to=5, resolution=0.1, orient="horizontal")
         self.threshold_slider.grid(row=12, column=1, sticky="w")
-        self.threshold_slider.set(threshold)
+        self.threshold_slider.set(kwargs.get("start_threshold", 3))
 
         tk.Label(self.root, text="").grid(row=13, column=0, sticky="w")
 
         tk.Label(self.root, text="Outlier Threshold\nStep Down", justify="left", font=("TimesNewRoman", 12)).grid(row=14, column=0, sticky="w")
         self.stepdown_slider = tk.Scale(self.root, from_=-1, to=1, resolution=0.05, orient="horizontal")
         self.stepdown_slider.grid(row=14, column=1, sticky="w")
-        self.stepdown_slider.set(stepdown)
+        self.stepdown_slider.set(kwargs.get("threshold_stepdown", 0.25))
 
         tk.Label(self.root, text="").grid(row=15, column=0, sticky="w")
 
@@ -124,14 +124,14 @@ class ConfigGUI:
         while 1:
             try:
                 if self.config_var.get() == 0:  # auto is selected so disable other parameters
-                    for btn in self.smoothing_btns:
-                        btn.config(state="disabled")
+                    self.window_slider.config(state="disabled")
+                    self.polyorder_slider.config(state="disabled")
                     self.iter_slider.config(state="disabled")
                     self.threshold_slider.config(state="disabled")
                     self.stepdown_slider.config(state="disabled")
                 else:
-                    for btn in self.smoothing_btns:
-                        btn.config(state="normal")
+                    self.window_slider.config(state="normal")
+                    self.polyorder_slider.config(state="normal")
                     self.iter_slider.config(state="normal")
                     self.threshold_slider.config(state="normal")
                     self.stepdown_slider.config(state="normal")
@@ -142,11 +142,14 @@ class ConfigGUI:
 
                 time.sleep(.1)
 
-                auto = not bool(self.config_var.get())
-                smoothing = self.smoothing_var.get()
-                iters = self.iter_slider.get()
-                threshold = self.threshold_slider.get()
-                stepdown = self.stepdown_slider.get()
+                data = {
+                    "smooth":bool(self.config_var.get()),
+                    "window_length":self.window_slider.get(),
+                    "polyorder":self.polyorder_slider.get(),
+                    "iters":self.iter_slider.get(),
+                    "start_threshold":self.threshold_slider.get(),
+                    "threshold_stepdown":self.stepdown_slider.get()
+                }
 
             except tk.TclError:
                 destroy_window = False
@@ -155,7 +158,7 @@ class ConfigGUI:
         if destroy_window:
             self.root.destroy()
 
-        return auto, smoothing, iters, threshold, stepdown
+        return data
 
 
 
@@ -424,7 +427,7 @@ class MatplotlibGUI:
 
     def new_derivative(self, _):
         """
-        Button callback for adding a new derivative. This looks at the last dataset
+        Button callback for adding a new (derivative). This looks at the last dataset
         present and differentiates it. It then makes a new figure with new
         dimensions so that the derivative graph will be displayed.
 
@@ -441,7 +444,7 @@ class MatplotlibGUI:
         x_dataset = []
         y_dataset = []
         for x, y in zip(self.x_datasets[-1], self.y_datasets[-1]):
-            x_data, y_data = data_analysis.get_derivative(
+            x_data, y_data = data_analysis.derivative(
                 x,
                 y
             )
@@ -481,23 +484,21 @@ class MatplotlibGUI:
             x_dataset = []
             y_dataset = []
             for x, y in zip(self.x_datasets[index - 1], self.y_datasets[index - 1]):
-                x_data, y_data = data_analysis.get_derivative(
+                x_data, y_data = data_analysis.derivative(
                     x,
                     y,
-                    initial_smoothing=self.config_btns[index][1]["initial_smoothing"],
-                    iters=self.config_btns[index][1]["iterations"],
-                    start_threshold=self.config_btns[index][1]["outlier_threshold"],
-                    threshold_stepdown=self.config_btns[index][1]["outlier_stepdown"]
+                    **self.config_btns[index][1]
                 )
                 #TODO: add actual smoothing options
                 x_dataset.append(x_data)
                 y_dataset.append(y_data)
+
             self.x_datasets[index] = x_dataset
             self.y_datasets[index] = y_dataset
-
             self.plot_updates.append(self.__get_matrix_coordinates(index))
 
             self.update_derivative(index + 1)  # update all following derivative graphs
+
 
 
     def config_callback(self, _, entry):
@@ -519,25 +520,8 @@ class MatplotlibGUI:
         None.
 
         """
-        c = ConfigGUI(
-            self.config_btns[entry][1]["initial_smoothing"],
-            self.config_btns[entry][1]["iterations"],
-            self.config_btns[entry][1]["outlier_threshold"],
-            self.config_btns[entry][1]["outlier_stepdown"],
-            "dy/dx " + str(entry) + " Configuration"
-            )
-        auto, smoothing, iters, threshold, stepdown = c.mainloop()
-
-        if not auto:
-            self.config_btns[entry][1]["initial_smoothing"] = smoothing
-            self.config_btns[entry][1]["iterations"] = iters
-            self.config_btns[entry][1]["outlier_threshold"] = threshold
-            self.config_btns[entry][1]["outlier_stepdown"] = stepdown
-        else:
-            self.config_btns[entry][1]["initial_smoothing"] = 0
-            self.config_btns[entry][1]["iterations"] = 5
-            self.config_btns[entry][1]["outlier_threshold"] = 3
-            self.config_btns[entry][1]["outlier_stepdown"] = 0.25
+        c = ConfigGUI("dy/dx " + str(entry) + " Configuration", **self.config_btns[entry][1])
+        self.config_btns[entry][1] = c.mainloop()
 
         self.update_derivative(entry)
 
@@ -564,10 +548,12 @@ class MatplotlibGUI:
                 self.config_btns[entry][0] = btn
             if self.config_btns[entry][1] is None:  # if config dne
                 config = {
-                    "initial_smoothing":0,
-                    "iterations":5,
-                    "outlier_threshold":3,
-                    "outlier_stepdown":0.25
+                    "smooth":False,
+                    "window_length":9,
+                    "polyorder":1,
+                    "iters":2,
+                    "start_threshold":3,
+                    "threshold_stepdown":0
                 }
                 self.config_btns[entry][1] = config
 
@@ -575,6 +561,7 @@ class MatplotlibGUI:
         with self.mainloop_lock:
             for plot in self.plot_updates:
                 self.graph_subplot(plot[0], plot[1])
+                
             self.plot_updates = []
 
             if not plt.fignum_exists(self.figure.number) and self.allow_exit:
@@ -590,10 +577,11 @@ class MatplotlibGUI:
 
 if __name__ == "__main__":
     # test functionality of configuration screen
-    c = ConfigGUI(0, 5, 3, .25)
-    auto, smoothing, iters, threshold, stepdown = c.mainloop()
-    print(auto)
+    c = ConfigGUI()
+    smoothing, window_len, polyorder, iters, threshold, stepdown = c.mainloop()
     print(smoothing)
+    print(window_len)
+    print(polyorder)
     print(iters)
     print(threshold)
     print(stepdown)
