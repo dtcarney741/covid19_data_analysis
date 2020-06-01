@@ -25,10 +25,6 @@ Run ```python covid19_data_analysis.py``` or ```python3 covid19_data_analysis.py
 
 ## Sample Output 
 
-<style>
-#border {border-width: 10px;}
-</style>
-
 <p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
   <img src="img/confirmed_cases.png" width=1000>
   Graph of Confirmed Cases vs. Date and its Derivative
