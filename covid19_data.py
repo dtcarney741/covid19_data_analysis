@@ -1,7 +1,5 @@
 import csv
 import datetime
-import matplotlib.dates as mdates
-import matplotlib.pyplot as plt
 import os
 
 import matplotlib_gui
@@ -492,6 +490,23 @@ class Covid19_Data(object):
         return(data)
     
     
+    def create_lookup_tables(self, start_date, end_date):
+        integer_to_dates_table = {}
+        dates_to_integer_table = {}
+        
+        delta = datetime.timedelta(days=1)
+        i = 0
+        while start_date <= end_date:
+            date = start_date.strftime("%m-%d-%Y")
+            # create lookup table for converting to integers for math 
+            # and back to dates for plotting
+            integer_to_dates_table.update({i:date})
+            dates_to_integer_table.update({date:i})
+            
+            start_date += delta  # increase day and integer count by 1
+            i += 1     
+        
+        return integer_to_dates_table, dates_to_integer_table
         
     def plot_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -509,8 +524,6 @@ class Covid19_Data(object):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
         
-        integer_to_dates_table = {}
-        dates_to_integer_table = {}
         start_dates = []
         end_dates = []
         
@@ -521,8 +534,6 @@ class Covid19_Data(object):
         for key_val in key_list:
             if key_val in self.__time_series_data["CONFIRMED CASES"]:
                 x = self.__time_series_dates
-                for i in x:
-                    print(i)
                 
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
@@ -538,21 +549,10 @@ class Covid19_Data(object):
                 print("invalid state / county pair value: ", key_val)
                 return(False)
             
-        start_date = min(start_dates)
-        end_date = max(end_dates)
-        delta = datetime.timedelta(days=1)
-        i = 0
-        while start_date <= end_date:
-            date = start_date.strftime("%m-%d-%Y")
-            # create two way lookup tables for converting to integers for math 
-            # and back to dates for plotting
-            integer_to_dates_table.update({i:date})
-            dates_to_integer_table.update({date:i})
-            
-            start_date += delta
-            i += 1
+
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
-        integer_x_datasets = []
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
@@ -565,7 +565,6 @@ class Covid19_Data(object):
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
         while gui.mainloop(): pass
 
-        
         
     def plot_new_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -582,40 +581,46 @@ class Covid19_Data(object):
             for i in range(0, len(state_list)):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
-
-        fig, ax = plt.subplots()
+                
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+        
         for key_val in key_list:
             if key_val in self.__time_series_data["CONFIRMED CASES"]:
                 [x, y] = self.get_daily_new_cases(state=None, county=None, key=key_val)
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+                
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                
+                x_datasets.append(x)
+                y_datasets.append(y)
+                labels.append(key_val)
 
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            ax.plot(x,y, marker='o', label=key_val)
 
-        # format the ticks
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
-#        ax.xaxis.set_minor_locator(mdates.DayLocator())
-        ax.set_xlim(datemin, datemax)
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Confirmed Cases')               
-        # format the coords message box
-        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
-        ax.grid(True)
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
-        ax.legend()
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+            
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily New Cases")
+        gui.new_figure(1, 1)
 
-        fig.suptitle('Covid-19 Daily New Cases Plot')
-        
-        # rotates and right aligns the x labels, and moves the bottom of the
-        # axes up to make room for them
-        fig.autofmt_xdate()
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass 
 
-        plt.show()    
         
     def plot_incident_rate_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -633,7 +638,14 @@ class Covid19_Data(object):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
-        fig, ax = plt.subplots()
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+        
+
         for key_val in key_list:
             if key_val in self.__time_series_data["INCIDENT RATE"]:
                 x = self.__time_series_dates
@@ -641,32 +653,32 @@ class Covid19_Data(object):
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
                 y = self.__time_series_data["INCIDENT RATE"][key_val].copy()
+                
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                
+                x_datasets.append(x)
+                y_datasets.append(y)
+                labels.append(key_val)
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            ax.plot(x,y, marker='o', label=key_val)
-
-        # format the ticks
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
-#        ax.xaxis.set_minor_locator(mdates.DayLocator())
-        ax.set_xlim(datemin, datemax)
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Confirmed Cases per 100000 Population')               
-        # format the coords message box
-        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
-        ax.grid(True)
+            
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
-        ax.legend()
-        
-        fig.suptitle('Covid-19 Incident Rate Plot')
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+            
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases per 100000 Population", "Incident Rate")
+        gui.new_figure(1, 1)
 
-        # rotates and right aligns the x labels, and moves the bottom of the
-        # axes up to make room for them
-        fig.autofmt_xdate()
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass 
 
-        plt.show()    
 
     def plot_people_tested_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -684,7 +696,14 @@ class Covid19_Data(object):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
-        fig, ax = plt.subplots()
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+        
+        
         for key_val in key_list:
             if key_val in self.__time_series_data["INCIDENT RATE"]:
                 x = self.__time_series_dates
@@ -692,32 +711,32 @@ class Covid19_Data(object):
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
                 y = self.__time_series_data["PEOPLE TESTED"][key_val].copy()
+                
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                
+                x_datasets.append(x)
+                y_datasets.append(y)
+                labels.append(key_val)
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            ax.plot(x,y, marker='o', label=key_val)
 
-        # format the ticks
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
-#        ax.xaxis.set_minor_locator(mdates.DayLocator())
-        ax.set_xlim(datemin, datemax)
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Number of People Tested')
-        # format the coords message box
-        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
-        ax.grid(True)
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
-        ax.legend()
-        
-        fig.suptitle('Covid-19 People Tested Plot')
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+            
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "People Tested")
+        gui.new_figure(1, 1)
 
-        # rotates and right aligns the x labels, and moves the bottom of the
-        # axes up to make room for them
-        fig.autofmt_xdate()
-
-        plt.show()    
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass 
+    
 
     def plot_new_people_tested_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -735,39 +754,44 @@ class Covid19_Data(object):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
-        fig, ax = plt.subplots()
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+
         for key_val in key_list:
             if key_val in self.__time_series_data["PEOPLE TESTED"]:
                 [x, y] = self.get_daily_new_people_tested(state=None, county=None, key=key_val)
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                
+                x_datasets.append(x)
+                y_datasets.append(y)
+                labels.append(key_val)
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            ax.plot(x,y, marker='o', label=key_val)
 
-        # format the ticks
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
-#        ax.xaxis.set_minor_locator(mdates.DayLocator())
-        ax.set_xlim(datemin, datemax)
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Daily Number of People Tested')
-        # format the coords message box
-        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
-        ax.grid(True)
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
-        ax.legend()
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+            
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Number of People Tested", "Daily New People Tested")
+        gui.new_figure(1, 1)
 
-        fig.suptitle('Covid-19 Daily New People Tested Plot')
-        
-        # rotates and right aligns the x labels, and moves the bottom of the
-        # axes up to make room for them
-        fig.autofmt_xdate()
-
-        plt.show()    
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass 
+    
 
     def plot_daily_ratio_cases_to_people_tested_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -785,7 +809,13 @@ class Covid19_Data(object):
                 key_val = self.__create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
-        fig, ax = plt.subplots()
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+        
         for key_val in key_list:
             if key_val in self.__time_series_data["PEOPLE TESTED"]:
                 [x, cases] = self.get_daily_new_cases(state=None, county=None, key=key_val)
@@ -802,29 +832,28 @@ class Covid19_Data(object):
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                
+                x_datasets.append(x)
+                y_datasets.append(ratio)
+                labels.append(key_val)
+                
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            ax.plot(x,ratio, marker='o', label=key_val)
 
-        # format the ticks
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m'))
-#        ax.xaxis.set_minor_locator(mdates.DayLocator())
-        ax.set_xlim(datemin, datemax)
-
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Daily Ratio of Confirmed Cases to People Tested')
-        # format the coords message box
-        ax.format_xdata = mdates.DateFormatter('%m-%d-%Y')
-        ax.grid(True)
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
-        ax.legend()
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+            
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Ratio of Confirmed Cases to People Tested", "Percentage of Positive Test Results")
+        gui.new_figure(1, 1)
 
-        fig.suptitle('Covid-19 Percentage of Positive Test Results')
-        
-        # rotates and right aligns the x labels, and moves the bottom of the
-        # axes up to make room for them
-        fig.autofmt_xdate()
-
-        plt.show()    
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass 

@@ -168,7 +168,7 @@ class MatplotlibGUI:
     integeration between datasets and an interactive matplotlib plot
     has options for adding derivative graphs
     """
-    def __init__(self, integer_to_date_table, x_axis_label, y_axis_label):
+    def __init__(self, integer_to_date_table, x_axis_label, y_axis_label, plot_title=None):
         self.figure = None
         self.subplots = None
         self.fig_rows = 0
@@ -177,6 +177,10 @@ class MatplotlibGUI:
         self.integer_to_date_table = integer_to_date_table
         self.x_axis_label = x_axis_label
         self.y_axis_label = y_axis_label
+        if not plot_title:
+            self.plot_title = y_axis_label
+        else:
+            self.plot_title = plot_title
 
         self.btn_add_deriv = None
         self.btn_smooth_data = None
@@ -403,6 +407,14 @@ class MatplotlibGUI:
         index = self.__get_matrix_index(row, column)
         try:
             self.subplots[row, column].cla()
+            if self.config_btns.get(index):
+                suf = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
+                deriv_number = list(self.config_btns.keys()).index(index) + 1
+                title = suf(deriv_number) + " derivative of " + self.y_axis_label + " vs. " + self.x_axis_label
+            else:
+                title = self.y_axis_label + " vs. " + self.x_axis_label
+                
+            self.subplots[row, column].set_title(title, size=10)
             for x, y, label in zip(self.x_datasets[index], self.y_datasets[index], self.labels_dataset[index]):
                 x_dates = [ datetime.strptime(self.integer_to_date_table.get(integer), '%m-%d-%Y') for integer in x ]
                 self.subplots[row, column].plot(x_dates, y, marker='o', label=label)
@@ -419,7 +431,7 @@ class MatplotlibGUI:
             self.subplots[row, column].set_xlabel(self.x_axis_label)
             self.subplots[row, column].set_ylabel(self.y_axis_label)
             self.figure.subplots_adjust(bottom=0.25, wspace=.35)
-            self.figure.suptitle('Covid-19 Confirmed Cases Plot')  # TODO: Change this
+            self.figure.suptitle("Covid-19 " + self.plot_title + " Plot", fontsize=18)
 
         except IndexError:
             raise IndexError("Dataset at index i=" + str(index) + " does not exist")
@@ -489,7 +501,6 @@ class MatplotlibGUI:
                     y,
                     **self.config_btns[index][1]
                 )
-                #TODO: add actual smoothing options
                 x_dataset.append(x_data)
                 y_dataset.append(y_data)
 

@@ -103,9 +103,10 @@ def smooth_dataset(x_data, y_data, **kwargs):
                     slope = y_data[index + 2] - y_data[index + 1]
                     new_y.append(y_data[index + 1] - slope)
                 else:
-                    new_y.append(99999)
+                    new_y.append(9999999999999999999)
                 
         x_data = new_x
+        new_y = np.nan_to_num(new_y)  # make sure no numbers are invalid or savgol_filter will break
         y_data = signal.savgol_filter(
             new_y,
             kwargs.get("window_length", 9),
