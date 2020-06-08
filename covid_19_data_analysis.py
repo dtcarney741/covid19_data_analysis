@@ -37,7 +37,8 @@ while (choice.upper() != 'Q'):
     print("Options")
     print(c + "(R)" + r + "etrieve Johns Hopkins Data")
     print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports")
-    print("Plot Total " + c + "(C)" + r + "onfirmed Cases, Plot " + c + "(N)" + r + "ew Daily Cases, Plot Total " + c + "(D)" + r + "eaths, Plot " + c + "(I)" + r + "ncident Rate")
+    print("Plot Total " + c + "(C)" + r + "onfirmed Cases, Plot " + c + "(N)" + r + "ew Daily Cases, Plot Total " + c + "(D)" + r + "eaths, Plot Ne" + c + "(W)" + r + " Daily Deaths")
+    print(r+ "Plot " + c + "(I)" + r + "ncident Rate")
     print("Plot " + c + "(P)" + r + "eople Tested, Plot New Daily P" + c + "(E)" + r + "ople Tested, Plot Daily R" + c + "(A)" + r + "tio of Confirmed Cases to People Tested")
     print("Plot " + c + "(M)" + r + "y Saved Plots")
     print(c + "(Q)" + r + "uit")
@@ -74,27 +75,35 @@ while (choice.upper() != 'Q'):
             print(dates[i], tested[i])
     elif (choice.upper() == 'C'):
         key_list = c19_data.get_cases_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Confirmed Cases", "Select states / counties for plot", key_list)
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Confirmed Cases", key_list)
         c19_data.plot_cases_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'N'):
         key_list = c19_data.get_cases_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily New Cases", "Select states / counties for plot", key_list)
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily New Cases", key_list)
         c19_data.plot_new_cases_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'D'):
+        key_list = c19_data.get_deaths_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Deaths", key_list)
+        c19_data.plot_deaths_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'W'):
+        key_list = c19_data.get_deaths_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily New Deaths", key_list)
+        c19_data.plot_new_deaths_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'I'):
         key_list = c19_data.get_incident_rate_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Incident Rate", "Select states / counties for plot", key_list)
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Incident Rate", key_list)
         c19_data.plot_incident_rate_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'P'):
         key_list = c19_data.get_people_tested_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot People Tested", "Select states / counties for plot", key_list)
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot People Tested", key_list)
         c19_data.plot_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'E'):
         key_list = c19_data.get_people_tested_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily New People Tested", "Select states / counties for plot", key_list)
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily New People Tested", key_list)
         c19_data.plot_new_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'A'):
         key_list = c19_data.get_people_tested_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_keys("Plot Daily Ratio of Confirmed Cases to People Tested", "Select states / counties for plot", key_list)
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily Ratio of Confirmed Cases to People Tested", key_list)
         c19_data.plot_daily_ratio_cases_to_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'M'):
         selected_states = []

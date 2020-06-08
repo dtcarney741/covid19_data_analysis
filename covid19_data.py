@@ -71,7 +71,7 @@ class Covid19_Data(object):
             else:
                 state = row[self.__time_series_field_locations["STATE_NAME_COL"]]
                 county = row[self.__time_series_field_locations["COUNTY_NAME_COL"]]
-                key = self.__create_key(state, county)
+                key = Covid19_Data.create_key(state, county)
                     
                 # add state,county to the dictionary if not already in there data to the dictionary if it's in there
                 if key not in self.__time_series_data["CONFIRMED CASES"]:
@@ -146,7 +146,7 @@ class Covid19_Data(object):
                         # only import data for US (since this is the US daily reports you would expect this to always be true, but 
                         # some of the Johns Hopkins daily report files in the US folder have other countries mixed in
                         state = row[self.__us_data_field_locations["STATE_NAME_COL"]]
-                        key = self.__create_key(state, "ALL")
+                        key = Covid19_Data.create_key(state, "ALL")
                             
                         # add state,county to the dictionary if not already in there data to the dictionary if it's in there
                         if key not in self.__time_series_data["CONFIRMED CASES"]:
@@ -181,7 +181,7 @@ class Covid19_Data(object):
                         except:
                             cases = 0
                         try:
-                            deaths = int(row[self.__us_data_field_locations["DEATHS"]])
+                            deaths = int(row[self.__us_data_field_locations["DEATHS_COL"]])
                         except:
                             deaths = 0
                         try:
@@ -291,16 +291,32 @@ class Covid19_Data(object):
 
         return(found_everything)
 
-    def __create_key(self,state, county):
+    def create_key(state, county):
         """Desccrition: Function to create a key value for data structure dictionaries
         Inputs: state - string containing name of state to create key for
-                county - string containing name of county ot create key for
+                county - optional - string containing name of county to create key for.  If not supplied, default is "ALL"
         Outputs:
                 return - key value
         """
-        key = state + ", " + county
+        if county != None:
+            key = state + ", " + county
+        else:
+            key = state + ", ALL"
         return(key)
 
+    def split_state_county_from_key(key):
+        """Desccrition: Function to split a key value for data structure dictionaries into constituent state and county value
+        Inputs: key - the key value to split into state and county        
+        Outputs:
+                return - [state, county]
+                state - string containing name of state from key
+                county - string containing name of county from key
+        """
+        temp_string = key.split(',')
+        state = temp_string[0]
+        county = temp_string[1].lstrip()
+        return(state, county)
+        
     def __get_date_list_index(self,date):
         """Description: Returns the list index of a specified date in the time series dates list
         Inputs:
@@ -324,7 +340,7 @@ class Covid19_Data(object):
         Outputs:
           return - [[date], [cases]] or None of invalid state / county
         """
-        key = self.__create_key(state, county)
+        key = Covid19_Data.create_key(state, county)
         if key in self.__time_cases_data["CONFIRMED CASES"]:
             dates = self.__time_series_dates.copy()
             cases = self.__time_series_data["CONFIRMED CASES"][key].copy()
@@ -342,7 +358,7 @@ class Covid19_Data(object):
           return - [[date], [cases]] or None of invalid state / county
         """
         if key == None:
-            key = self.__create_key(state, county)
+            key = Covid19_Data.create_key(state, county)
 
         dates = []
         new_cases = []
@@ -353,13 +369,48 @@ class Covid19_Data(object):
                     if self.__time_series_data["CONFIRMED CASES"][key][i-1] != None:
                         new_case_val = self.__time_series_data["CONFIRMED CASES"][key][i] - self.__time_series_data["CONFIRMED CASES"][key][i-1]
                     else:
-                        new_case_val = self.__time_series_data["CONFIRMED CASES"][key][i]
+                        # first day that data appears should be set to 0 in new daily data because otherwise it would be a large jump
+                        # of everything up to that point, not just on that day;  the actual amount on this day is unknown
+                        new_case_val = 0
                 else:
                     new_case_val = None
                 new_cases.append(new_case_val)
             return([dates,new_cases])
         else:
             return(None)
+
+
+    def get_daily_new_deaths(self,state, county, key):
+        """Description: Accessor function to get new daily deaths data for a specified state and county
+        Inputs:
+            state - optional, the state to retrieve cases data for (ignored if the key value is not None)
+            county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
+            key - optional, key in form "State, County" to retrieve cases data
+        Outputs:
+          return - [[date], [cases]] or None of invalid state / county
+        """
+        if key == None:
+            key = Covid19_Data.create_key(state, county)
+
+        dates = []
+        new_deaths = []
+        if key in self.__time_series_data["DEATHS"]:
+            for i in range (1, len(self.__time_series_dates)):
+                dates.append(self.__time_series_dates[i])
+                if self.__time_series_data["DEATHS"][key][i] != None:
+                    if self.__time_series_data["DEATHS"][key][i-1] != None:
+                        # first day that data appears should be set to 0 in new daily data because otherwise it would be a large jump
+                        # of everything up to that point, not just on that day;  the actual amount on this day is unknown
+                        new_deaths_val = self.__time_series_data["DEATHS"][key][i] - self.__time_series_data["DEATHS"][key][i-1]
+                    else:
+                        new_deaths_val = 0
+                else:
+                    new_deaths_val = None
+                new_deaths.append(new_deaths_val)
+            return([dates,new_deaths])
+        else:
+            return(None)
+
 
     def get_daily_new_people_tested(self,state, county, key):
         """Description: Accessor function to get new daily people tested data for a specified state and county
@@ -371,7 +422,7 @@ class Covid19_Data(object):
           return - [[date], [cases]] or None of invalid state / county
         """
         if key == None:
-            key = self.__create_key(state, county)
+            key = Covid19_Data.create_key(state, county)
 
         dates = []
         new_cases = []
@@ -482,7 +533,7 @@ class Covid19_Data(object):
           return - [dates]
         """
         if key == None:
-            key = self.__create_key(state,county)
+            key = Covid19_Data.create_key(state,county)
 
         data = []
         for val in self.__time_series_data["PEOPLE TESTED"][key]:
@@ -521,7 +572,7 @@ class Covid19_Data(object):
         if key_list == None:
             key_list = []
             for i in range(0, len(state_list)):
-                key_val = self.__create_key(state_list[i], county_list[i])
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
         
         start_dates = []
@@ -566,6 +617,64 @@ class Covid19_Data(object):
         while gui.mainloop(): pass
 
         
+    def plot_deaths_data(self, state_list, county_list, key_list):
+        """Description: function to create an XY plot of specified state/county pairs
+        Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
+        Outpus:
+            A plot window is opened
+        """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+        
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+
+        for key_val in key_list:
+            if key_val in self.__time_series_data["DEATHS"]:
+                x = self.__time_series_dates
+                
+                datemin = datetime.date(x[0].year, x[0].month, 1)
+                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                y = self.__time_series_data["DEATHS"][key_val]
+                
+                x_datasets.append(x)
+                y_datasets.append(y)
+                labels.append(key_val)
+
+            else:
+                print("invalid state / county pair value: ", key_val)
+                return(False)
+            
+
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
+        
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Deaths")
+        gui.new_figure(1, 1)
+
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass
+
+
     def plot_new_cases_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
@@ -579,7 +688,7 @@ class Covid19_Data(object):
         if key_list == None:
             key_list = []
             for i in range(0, len(state_list)):
-                key_val = self.__create_key(state_list[i], county_list[i])
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
                 
         start_dates = []
@@ -621,6 +730,62 @@ class Covid19_Data(object):
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
         while gui.mainloop(): pass 
 
+
+    def plot_new_deaths_data(self, state_list, county_list, key_list):
+        """Description: function to create an XY plot of specified state/county pairs
+        Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
+        Outpus:
+            A plot window is opened
+        """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+                
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
+        
+        for key_val in key_list:
+            if key_val in self.__time_series_data["DEATHS"]:
+                [x, y] = self.get_daily_new_deaths(state=None, county=None, key=key_val)
+                datemin = datetime.date(x[0].year, x[0].month, 1)
+                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+                
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                
+                x_datasets.append(x)
+                y_datasets.append(y)
+                labels.append(key_val)
+
+            else:
+                print("invalid state / county pair value: ", key_val)
+                return(False)
+
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
+        
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+            
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily New Deaths")
+        gui.new_figure(1, 1)
+
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass 
+
         
     def plot_incident_rate_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
@@ -635,7 +800,7 @@ class Covid19_Data(object):
         if key_list == None:
             key_list = []
             for i in range(0, len(state_list)):
-                key_val = self.__create_key(state_list[i], county_list[i])
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
         start_dates = []
@@ -693,7 +858,7 @@ class Covid19_Data(object):
         if key_list == None:
             key_list = []
             for i in range(0, len(state_list)):
-                key_val = self.__create_key(state_list[i], county_list[i])
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
         start_dates = []
@@ -751,7 +916,7 @@ class Covid19_Data(object):
         if key_list == None:
             key_list = []
             for i in range(0, len(state_list)):
-                key_val = self.__create_key(state_list[i], county_list[i])
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
         start_dates = []
@@ -806,7 +971,7 @@ class Covid19_Data(object):
         if key_list == None:
             key_list = []
             for i in range(0, len(state_list)):
-                key_val = self.__create_key(state_list[i], county_list[i])
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
 
         start_dates = []

@@ -1,5 +1,6 @@
 import easygui as eg
 import os
+import covid19_data
 
 import covid19_data
  
@@ -103,3 +104,36 @@ class Covid19_UI(object):
         choice = eg.choicebox(question, title, option_list)
 
         return(choice)
+
+    def select_states_counties(title, key_list):
+        """Description: Prompts user to select one key on a list
+        Inputs: title - string with title of the window
+                key_list - list of [state,county] to select from
+        Outputs:
+        returns item index that was selected or None if none selected
+        """
+        select_only_states = eg.boolbox("Do you want to select only states, or individual counties?", "Selection Type", ["States", "States + Counties"])
+        state_list = []
+        option_list = []
+        for key in key_list:
+            [state, county] = covid19_data.Covid19_Data.split_state_county_from_key(key)
+            if state not in state_list:
+                state_list.append(state)
+        selected_states = Covid19_UI.select_keys(title, "Select states to plot", state_list)
+        if select_only_states:
+            for state in selected_states:
+                key = covid19_data.Covid19_Data.create_key(state, None)
+                option_list.append(key)
+        else:
+            for state in selected_states:
+                state_county_list = []
+                for key in key_list:
+                    [key_state, key_county] = covid19_data.Covid19_Data.split_state_county_from_key(key)
+                    if  key_state == state:
+                        state_county_list.append(key)
+                selected_states_counties = Covid19_UI.select_keys(title, "For " + state + ", select counties to plot", state_county_list)
+                for key in selected_states_counties:
+                    option_list.append(key)
+        
+        print(option_list)
+        return(option_list)
