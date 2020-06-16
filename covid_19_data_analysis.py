@@ -37,9 +37,6 @@ while (choice.upper() != 'Q'):
     print("Options")
     print(c + "(R)" + r + "etrieve Johns Hopkins Data")
     print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports")
-    print("Plot Total " + c + "(C)" + r + "onfirmed Cases, Plot " + c + "(N)" + r + "ew Daily Cases, Plot Total " + c + "(D)" + r + "eaths, Plot Ne" + c + "(W)" + r + " Daily Deaths")
-    print(r+ "Plot " + c + "(I)" + r + "ncident Rate")
-    print("Plot " + c + "(P)" + r + "eople Tested, Plot New Daily P" + c + "(E)" + r + "ople Tested, Plot Daily R" + c + "(A)" + r + "tio of Confirmed Cases to People Tested")
     print("Plot " + c + "(M)" + r + "y Saved Plots")
     print(c + "(Q)" + r + "uit")
     choice = input("What is your choice? ")
@@ -67,75 +64,47 @@ while (choice.upper() != 'Q'):
         else:
             print("ERROR: time series data file not read in succesfully")
     elif (choice.upper() == "DEBUG1"):
-        covid19_UI.Covid19_UI.print_state_names(c19_data)
+        print("Debug 1 command")
     elif (choice.upper() == "DEBUG2"):
-        dates = c19_data.get_dates()
-        tested = c19_data.get_people_tested(state="Wisconsin", county="ALL", key=None)
-        for i in range(0, len(dates)):
-            print(dates[i], tested[i])
-    elif (choice.upper() == 'C'):
-        key_list = c19_data.get_cases_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Confirmed Cases", key_list)
-        c19_data.plot_cases_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'N'):
-        key_list = c19_data.get_cases_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily New Cases", key_list)
-        c19_data.plot_new_cases_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'D'):
-        key_list = c19_data.get_deaths_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Deaths", key_list)
-        c19_data.plot_deaths_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'W'):
-        key_list = c19_data.get_deaths_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily New Deaths", key_list)
-        c19_data.plot_new_deaths_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'I'):
-        key_list = c19_data.get_incident_rate_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Incident Rate", key_list)
-        c19_data.plot_incident_rate_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'P'):
-        key_list = c19_data.get_people_tested_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot People Tested", key_list)
-        c19_data.plot_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'E'):
-        key_list = c19_data.get_people_tested_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily New People Tested", key_list)
-        c19_data.plot_new_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
-    elif (choice.upper() == 'A'):
-        key_list = c19_data.get_people_tested_keys()
-        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily Ratio of Confirmed Cases to People Tested", key_list)
-        c19_data.plot_daily_ratio_cases_to_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
+        print("Debug 2 command")
     elif (choice.upper() == 'M'):
+        selected_countries = []
         selected_states = []
         selected_counties = []
-        selected_states.append('Wisconsin')
-        selected_counties.append('ALL')
+        selected_countries.append("US")
         selected_states.append('Wisconsin')
         selected_counties.append('Brown')
+        selected_countries.append("US")
         selected_states.append('Wisconsin')
         selected_counties.append('Calumet')
+        selected_countries.append("US")
         selected_states.append('Wisconsin')
         selected_counties.append('Outagamie')
+        selected_countries.append("US")
         selected_states.append('Wisconsin')
         selected_counties.append('Winnebago')
-        c19_data.plot_new_cases_data(state_list=selected_states, county_list=selected_counties, key_list=None)
+        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
+
+        selected_countries = []
         selected_states = []
         selected_counties = []
+        selected_countries.append("US")
         selected_states.append('Wisconsin')
-        selected_counties.append('ALL')
-        c19_data.plot_daily_ratio_cases_to_people_tested_data(state_list=selected_states, county_list=selected_counties, key_list=None)
-        selected_states.append('Illinois')
-        selected_counties.append('ALL')
-        selected_states.append('Minnesota')
-        selected_counties.append('ALL')
-        selected_states.append('Indiana')
-        selected_counties.append('ALL')
-        selected_states.append('Michigan')
-        selected_counties.append('ALL')
-        selected_states.append('Iowa')
-        selected_counties.append('ALL')
-        selected_states.append('Ohio')
-        selected_counties.append('ALL')
-        c19_data.plot_daily_ratio_cases_to_people_tested_data(state_list=selected_states, county_list=selected_counties, key_list=None)
-        c19_data.plot_new_people_tested_data(state_list=selected_states, county_list=selected_counties, key_list=None)
-        c19_data.plot_new_cases_data(state_list=selected_states, county_list=selected_counties, key_list=None)
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Wisconsin')
+        selected_counties.append('Calumet')
+        selected_countries.append("US")
+        selected_states.append('Wisconsin')
+        selected_counties.append('Outagamie')
+        selected_countries.append("US")
+        selected_states.append('Wisconsin')
+        selected_counties.append('Winnebago')
+        selected_countries.append("US")
+        selected_states.append('Alabama')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Alabama')
+        selected_counties.append('Jefferson')
+        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
+       
