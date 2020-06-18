@@ -4,3 +4,4 @@ easygui
 matplotlib
 numpy
 statsmodels
+streamlit

@@ -54,7 +54,7 @@ class Covid19_Tree_Node(object):
         """
         children_list = []
         for child in self.child_nodes:
-            children_list.append(child)
+            children_list.append(self.child_nodes[child])
         return children_list
 
     def initialize_confirmed_cases(self,length):

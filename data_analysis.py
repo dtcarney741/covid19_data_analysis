@@ -116,7 +116,7 @@ def smooth_dataset(x_data, y_data, **kwargs):
     return x_data, y_data
 
 
-def derivative(x_data, y_data, **kwargs):
+def derivative(x_data, y_data):
     """
     calculates the derivative of a dataset and smooths it
 
@@ -160,8 +160,8 @@ def derivative(x_data, y_data, **kwargs):
     dy = np.diff(y_interp) / 1  # function is evenly spaced because of 
                                 # interpolation method so dx will be 1
     
-    if kwargs.get("smooth", False):
-        dx, dy = smooth_dataset(dx, dy, **kwargs)
+    # if kwargs.get("smooth", False):
+    #     dx, dy = smooth_dataset(dx, dy, **kwargs)
     
     return dx, dy
 
