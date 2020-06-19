@@ -135,28 +135,43 @@ class Covid19_Data(object):
                                      ...}
           return - True if successful, false if not
         """
+        filename_split = filename.split(".")
+        if filename_split[len(filename_split)-2].endswith("_US"):
+            us_file_type = True
+        else:
+            us_file_type = False
+        
         csv_file_obj = open(filename)
         reader_obj = csv.reader(csv_file_obj)
         header_row_found = False
         row_count = 1
         for row in reader_obj:
             if header_row_found == False:
-                if row[0].upper() == "UID":
-                    if not self.__map_time_series_locations(row, row_count):
-                        print("ERROR: read_time_series_cases_data - invalid data file")
-                        return False
-                    else:
-                        date_list = []
-                        for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
-                            date_list.append(datetime.datetime.strptime(row[col],'%m/%d/%y'))
-                            
-                        # TODO: date list should already be initialized, so no need to do this here - need to add initialize code
-                        self.time_series_dates = date_list
-                        header_row_found = True
+                if us_file_type == True:
+                    header_row_found = self.__map_time_series_us_locations(row, row_count)
+                else:
+                    header_row_found = self.__map_time_series_locations(row, row_count)
+
+                if header_row_found:
+                    date_list = []
+                    for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
+                        date_list.append(datetime.datetime.strptime(row[col],'%m/%d/%y'))
+                        
+                    # TODO: date list should already be initialized, so no need to do this here - need to add initialize code
+                    self.time_series_dates = date_list
+                elif row_count > 10:
+                    print("ERROR: read_time_series_cases_data - invalid data file")
+                    return False
+                    
             else:
                 country = row[self.__time_series_field_locations["COUNTRY_NAME_COL"]]
                 state = row[self.__time_series_field_locations["STATE_NAME_COL"]]
-                county = row[self.__time_series_field_locations["COUNTY_NAME_COL"]]
+                if us_file_type:
+                    county = row[self.__time_series_field_locations["COUNTY_NAME_COL"]]
+                else:
+                    # this is a world data time series file so there is no county data
+                    county = None
+                    
                 # add the country to the base tree if it's not already there
                 country_node = self.time_series_data_tree.get_child_node(country)
                 if country_node == None:
@@ -165,38 +180,54 @@ class Covid19_Data(object):
                     country_node.initialize_confirmed_cases(len(self.time_series_dates))
 
                 # add the state to the country tree node if it's not already there
-                state_node = country_node.get_child_node(state)
-                if state_node == None:
-                    state_node = Covid19_Tree_Node(state)
-                    country_node.add_child(state_node)
-                    state_node.initialize_confirmed_cases(len(self.time_series_dates))
+                if state != "":
+                    state_node = country_node.get_child_node(state)
+                    if state_node == None:
+                        state_node = Covid19_Tree_Node(state)
+                        country_node.add_child(state_node)
+                        state_node.initialize_confirmed_cases(len(self.time_series_dates))
+                else:
+                    state_node = None
                 
                 # add the county to the state tree node if it's not already there (if it is already there that is an error condition because the same county should not be encountered twice in the data)
-                county_node = state_node.get_child_node(county)
-                if county_node == None:
-                    county_node = Covid19_Tree_Node(county)
-                    state_node.add_child(county_node)
-                    county_node.initialize_confirmed_cases(len(self.time_series_dates))
+                if county != None and county != "":
+                    county_node = state_node.get_child_node(county)
+                    if county_node == None:
+                        county_node = Covid19_Tree_Node(county)
+                        state_node.add_child(county_node)
+                        county_node.initialize_confirmed_cases(len(self.time_series_dates))
+                    else:
+                        print("ERROR: read_time_series_cases_data - duplicate county found")
+                        return False
                 else:
-                    print("ERROR: read_time_series_cases_data - duplicate county found")
-                    return False
+                    county_node = None
                     
-                # add data to the apprpriate entry in the dictionary for state/county and aggregate for whole state, and aggregate for whole country
+                # add data to the apprpriate entry in the tree for country/state/county and aggregate for whole state, and aggregate for whole country
                 i = 0
                 for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
                     j = self.time_series_dates.index(date_list[i])
-                    county_node.confirmed_cases_time_series_data[j] = int(float(row[col]))
-                    
-                    if state_node.confirmed_cases_time_series_data[j] == None:
-                        state_node.confirmed_cases_time_series_data[j] = int(float(row[col]))
-                    else:
-                        state_node.confirmed_cases_time_series_data[j] = state_node.confirmed_cases_time_series_data[j] + int(row[col])
+                    cases = int(float(row[col]))
 
-                    if country_node.confirmed_cases_time_series_data[j] == None:
-                        country_node.confirmed_cases_time_series_data[j] = int(float(row[col]))
-                    else:
-                        country_node.confirmed_cases_time_series_data[j] = country_node.confirmed_cases_time_series_data[j] + int(float(row[col]))
+                    if county_node != None:
+                        county_node.confirmed_cases_time_series_data[j] = cases
+                        # aggregate county data to state
+                        if state_node.confirmed_cases_time_series_data[j] == None:
+                            state_node.confirmed_cases_time_series_data[j] = cases
+                        else:
+                            state_node.confirmed_cases_time_series_data[j] = state_node.confirmed_cases_time_series_data[j] + cases
+                        # aggregate county data to country
+                        if country_node.confirmed_cases_time_series_data[j] == None:
+                            country_node.confirmed_cases_time_series_data[j] = cases
+                        else:
+                            country_node.confirmed_cases_time_series_data[j] = country_node.confirmed_cases_time_series_data[j] + cases
+                    elif state_node != None:
+                        state_node.confirmed_cases_time_series_data[j] = cases
+                        #todo figure out whether we should aggregate state data up to country                        
+                    elif country_node != None:
+                        country_node.confirmed_cases_time_series_data[j] = cases
+
                     i = i + 1
+                        
 
             row_count = row_count + 1
 
@@ -330,7 +361,7 @@ class Covid19_Data(object):
         return(True)
        
         
-    def __map_time_series_locations(self,row, row_num):
+    def __map_time_series_us_locations(self,row, row_num):
         """Description: Fills in the dictionary of locations with the associated row and column index
         Inputs:
             row - the comma separated row list to check for header columns
@@ -348,7 +379,7 @@ class Covid19_Data(object):
         self.__time_series_field_locations["LAST_DATE_COL"] = -1
 
         i = 0
-        while not found_everything and i < 1000:
+        while not found_everything and i < len(row):
             if row[i].upper() == "COUNTRY_REGION":
                 self.__time_series_field_locations["COUNTRY_NAME_COL"] = i
                 self.__time_series_field_locations["HEADER_ROW"] = row_num
@@ -367,6 +398,45 @@ class Covid19_Data(object):
             found_everything = True
             for x in self.__time_series_field_locations:
                 if self.__time_series_field_locations[x] == -1:
+                    found_everything = False
+                    self.__time_series_field_locations["HEADER_ROW"] = -1
+
+        return(found_everything)
+
+    def __map_time_series_locations(self,row, row_num):
+        """Description: Fills in the dictionary of locations with the associated row and column index
+        Inputs:
+            row - the comma separated row list to check for header columns
+            row_num - the current row number
+        Outputs:
+          self.__time_series_field_locations - updated dictionary with locations added
+          return - True if all locations found, false if not
+        """
+        found_everything = False
+        self.__time_series_field_locations["HEADER_ROW"] = -1
+        self.__time_series_field_locations["COUNTRY_NAME_COL"] = -1
+        self.__time_series_field_locations["STATE_NAME_COL"] = -1
+        self.__time_series_field_locations["COUNTY_NAME_COL"] = -1
+        self.__time_series_field_locations["FIRST_DATE_COL"] = -1
+        self.__time_series_field_locations["LAST_DATE_COL"] = -1
+
+        i = 0
+        while not found_everything and i < len(row):
+            if row[i].upper() == "COUNTRY/REGION":
+                self.__time_series_field_locations["COUNTRY_NAME_COL"] = i
+                self.__time_series_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "PROVINCE/STATE":
+                self.__time_series_field_locations["STATE_NAME_COL"] = i
+                self.__time_series_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LONG":
+                self.__time_series_field_locations["FIRST_DATE_COL"] = i+1
+                self.__time_series_field_locations["LAST_DATE_COL"] = len(row)-1
+                self.__time_series_field_locations["HEADER_ROW"] = row_num
+            i = i + 1
+
+            found_everything = True
+            for x in self.__time_series_field_locations:
+                if x != "COUNTY_NAME_COL" and self.__time_series_field_locations[x] == -1:
                     found_everything = False
                     self.__time_series_field_locations["HEADER_ROW"] = -1
 
@@ -391,7 +461,7 @@ class Covid19_Data(object):
         self.__us_data_field_locations["INCIDENT_RATE_COL"] = -1
 
         i = 0
-        while not found_everything and i < 1000:
+        while not found_everything and i < len(row):
             if row[i].upper() == "COUNTRY_REGION":
                 self.__us_data_field_locations["COUNTRY_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num                
