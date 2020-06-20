@@ -957,7 +957,73 @@ class Covid19_Data(object):
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
         while gui.mainloop(): pass 
     
+    def plot_ratio_cases_to_people_tested_data(self, state_list, county_list, key_list):
+        """Description: function to create an XY plot of specified state/county pairs
+        Inputs: 
+            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
+            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
+            key_list - optional, list of key values ("State, County") to plot data for
+        Outpus:
+            A plot window is opened
+        """
+        # create list of keys
+        if key_list == None:
+            key_list = []
+            for i in range(0, len(state_list)):
+                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
+                key_list.append(key_val)
+        
+        start_dates = []
+        end_dates = []
+        
+        x_datasets = []
+        y_datasets = []
+        labels = []
 
+        for key_val in key_list:
+            if key_val in self.__time_series_data["CONFIRMED CASES"]:
+                x = self.__time_series_dates
+                
+                datemin = datetime.date(x[0].year, x[0].month, 1)
+                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
+                start_dates.append(datemin)
+                end_dates.append(datemax)
+                cases = self.__time_series_data["CONFIRMED CASES"][key_val]
+                tested = self.__time_series_data["PEOPLE TESTED"][key_val]
+                ratio = []
+                for i in range(0,len(x)):
+                    if cases[i] == None or tested[i] == None:
+                        ratio.append(None)
+                    elif tested[i] == 0:
+                        ratio.append(None)
+                    else:
+                        ratio.append(cases[i]/tested[i])
+
+                x_datasets.append(x)
+                y_datasets.append(ratio)
+                labels.append(key_val)
+
+            else:
+                print("invalid state / county pair value: ", key_val)
+                return(False)
+            
+
+        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
+        
+        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
+        for x_dataset in x_datasets:
+            dataset = []
+            for x in x_dataset:
+                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
+            integer_x_datasets.append(dataset)
+
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Ratio Confirmed Cases to People Tested", "Percentage of Positive Test Results")
+        gui.new_figure(1, 1)
+
+        gui.add_dataset(integer_x_datasets, y_datasets, labels)
+        while gui.mainloop(): pass
+
+        
     def plot_daily_ratio_cases_to_people_tested_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
@@ -1017,8 +1083,11 @@ class Covid19_Data(object):
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
             
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Ratio of Confirmed Cases to People Tested", "Percentage of Positive Test Results")
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Ratio of Confirmed Cases to People Tested", "Daily Percentage of Positive Test Results")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
         while gui.mainloop(): pass 
+
+        
+        

@@ -40,6 +40,7 @@ while (choice.upper() != 'Q'):
     print("Plot Total " + c + "(C)" + r + "onfirmed Cases, Plot " + c + "(N)" + r + "ew Daily Cases, Plot Total " + c + "(D)" + r + "eaths, Plot Ne" + c + "(W)" + r + " Daily Deaths")
     print(r+ "Plot " + c + "(I)" + r + "ncident Rate")
     print("Plot " + c + "(P)" + r + "eople Tested, Plot New Daily P" + c + "(E)" + r + "ople Tested, Plot Daily R" + c + "(A)" + r + "tio of Confirmed Cases to People Tested")
+    print("Plot Ra" + c + "(T)" + r + "io of Confirmed Cases to People Tested")
     print("Plot " + c + "(M)" + r + "y Saved Plots")
     print(c + "(Q)" + r + "uit")
     choice = input("What is your choice? ")
@@ -105,6 +106,10 @@ while (choice.upper() != 'Q'):
         key_list = c19_data.get_people_tested_keys()
         selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Daily Ratio of Confirmed Cases to People Tested", key_list)
         c19_data.plot_daily_ratio_cases_to_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
+    elif (choice.upper() == 'T'):
+        key_list = c19_data.get_people_tested_keys()
+        selected_keys = covid19_UI.Covid19_UI.select_states_counties("Plot Ratio of Confirmed Cases to People Tested", key_list)
+        c19_data.plot_ratio_cases_to_people_tested_data(state_list=None, county_list=None, key_list = selected_keys)
     elif (choice.upper() == 'M'):
         selected_states = []
         selected_counties = []
