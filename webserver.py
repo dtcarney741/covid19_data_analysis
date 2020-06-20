@@ -5,20 +5,24 @@ Created on Mon Jun 15 22:06:37 2020
 
 @author: aiden
 """
-
+from datetime import date
 import streamlit as st
 import copy
+import os
 
 import covid19_data
 import plot_handler
+import data_grabber
 
 @st.cache(hash_funcs={covid19_data.Covid19_Tree_Node: lambda _: None}, allow_output_mutation=True)
-def parse_data(file_name, folder_name):
-    st.write("Cache miss: expensive_computation")
-    data = covid19_data.Covid19_Data()
-    data.read_time_series_cases_data("./data/2020-05-11/CSSEGISandData-COVID-19-5184bec/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv")
-    data.read_us_daily_reports_data("./data/2020-05-11/CSSEGISandData-COVID-19-5184bec/csse_covid_19_data/csse_covid_19_daily_reports_us")
-    
+def parse_data(files, folders):
+    with st.spinner("Parsing Data, Please Wait..."):
+        data = covid19_data.Covid19_Data()
+        for file in files:
+            data.read_time_series_cases_data(file)
+        for folder in folders:
+            data.read_us_daily_reports_data(folder)
+        
     return data
 
 @st.cache(allow_output_mutation=True)   
@@ -83,7 +87,42 @@ def get_label(node):
 # get the data to parse
 file = "./data/2020-05-11/CSSEGISandData-COVID-19-5184bec/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
 folder = "./data/2020-05-11/CSSEGISandData-COVID-19-5184bec/csse_covid_19_data/csse_covid_19_daily_reports_us"
-covid_data = copy.deepcopy(parse_data(file, folder))
+
+TIME_SERIES_PATH = '/csse_covid_19_data/csse_covid_19_time_series'
+US_DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports_us'
+DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports'
+
+if os.path.isdir('./data'):
+    all_subdirs = []
+    for d in os.listdir('./data'):
+        bd = os.path.join('./data', d)
+        if os.path.isdir(bd):
+            all_subdirs.append(bd)
+    latest_subdir = max(all_subdirs, key=os.path.getmtime)
+    
+    data_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + TIME_SERIES_PATH
+    us_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + US_DAILY_REPORTS_PATH
+    daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + DAILY_REPORTS_PATH
+else:
+    data_folder = '.'
+    us_daily_reports_folder = None
+    daily_reports_folder = None
+    
+    
+if str(date.today()) not in data_folder:
+    with st.spinner("Retreiving Latest Data, Please Wait..."):
+        data_grabber.retrieve_data()
+    
+print(data_folder, us_daily_reports_folder, daily_reports_folder, sep="\n")
+
+files = [
+    data_folder + "/time_series_covid19_confirmed_US.csv",
+    data_folder + "/time_series_covid19_confirmed_global.csv"
+    ]
+folders = [
+    us_daily_reports_folder
+    ]
+covid_data = copy.deepcopy(parse_data(files, folders))
 world_node = covid_data.time_series_data_tree
 
 
