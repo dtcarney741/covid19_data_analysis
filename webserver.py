@@ -9,10 +9,12 @@ from datetime import date
 import streamlit as st
 import copy
 import os
+import numpy as np
 
 import covid19_data
 import plot_handler
 import data_grabber
+
 
 @st.cache(hash_funcs={covid19_data.Covid19_Tree_Node: lambda _: None}, allow_output_mutation=True)
 def parse_data(files, folders):
@@ -24,6 +26,7 @@ def parse_data(files, folders):
             data.read_us_daily_reports_data(folder)
         
     return data
+
 
 @st.cache(allow_output_mutation=True)   
 def create_plot_handler(lookup, x_label, y_label, x, y, labels):
@@ -88,36 +91,36 @@ def get_label(node):
 file = "./data/2020-05-11/CSSEGISandData-COVID-19-5184bec/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
 folder = "./data/2020-05-11/CSSEGISandData-COVID-19-5184bec/csse_covid_19_data/csse_covid_19_daily_reports_us"
 
-TIME_SERIES_PATH = '/csse_covid_19_data/csse_covid_19_time_series'
-US_DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports_us'
-DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports'
 
-if os.path.isdir('./data'):
-    all_subdirs = []
-    for d in os.listdir('./data'):
-        bd = os.path.join('./data', d)
-        if os.path.isdir(bd):
-            all_subdirs.append(bd)
+# make directories for data to be held if they do not already exist
+if not os.path.isdir(os.path.join(os.path.dirname("."), "data")):
+    os.mkdir(os.path.join(os.path.dirname("."), "data"))
+
+all_subdirs = []
+for d in os.listdir('./data'):
+    bd = os.path.join('./data', d)
+    if os.path.isdir(bd):
+        all_subdirs.append(bd)
+        
+if all_subdirs:
     latest_subdir = max(all_subdirs, key=os.path.getmtime)
-    
-    data_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + TIME_SERIES_PATH
-    us_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + US_DAILY_REPORTS_PATH
-    daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + DAILY_REPORTS_PATH
 else:
-    data_folder = '.'
-    us_daily_reports_folder = None
-    daily_reports_folder = None
-    
-    
-if str(date.today()) not in data_folder:
+    latest_subdir = "."
+        
+if str(date.today()) not in latest_subdir:                        # download data if it is not present
     with st.spinner("Retreiving Latest Data, Please Wait..."):
         data_grabber.retrieve_data()
-    
-print(data_folder, us_daily_reports_folder, daily_reports_folder, sep="\n")
+        
+data_folder = "./data/" + str(date.today()) + "/"
+data_folder = data_folder + os.listdir(data_folder)[0]
+time_series_folder = data_folder + "/csse_covid_19_data/csse_covid_19_time_series"
+us_daily_reports_folder = data_folder + "/csse_covid_19_data/csse_covid_19_daily_reports_us"
+daily_reports_folder = data_folder + "/csse_covid_19_data/csse_covid_19_daily_reports"
 
+    
 files = [
-    data_folder + "/time_series_covid19_confirmed_US.csv",
-    data_folder + "/time_series_covid19_confirmed_global.csv"
+    time_series_folder + "/time_series_covid19_confirmed_US.csv",
+    time_series_folder + "/time_series_covid19_confirmed_global.csv"
     ]
 folders = [
     us_daily_reports_folder
@@ -180,6 +183,10 @@ if graph_type == "Confirmed Cases":
             labels.append(get_label(node))
         else:
             st.warning("No Confirmed Cases data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Confirmed Cases", x, datasets, labels)
 elif graph_type == "Deaths":
     for node in plotted_areas:
@@ -188,6 +195,10 @@ elif graph_type == "Deaths":
             labels.append(get_label(node))
         else:
             st.warning("No Deaths data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Deaths", x, datasets, labels)
 elif graph_type == "Testing":
     for node in plotted_areas:
@@ -196,6 +207,10 @@ elif graph_type == "Testing":
             labels.append(get_label(node))
         else:
             st.warning("No Testing data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Tests", x, datasets, labels)
 elif graph_type == "Incident Plot":
     for node in plotted_areas:
@@ -204,9 +219,14 @@ elif graph_type == "Incident Plot":
             labels.append(get_label(node))
         else:
             st.warning("No Incident Rate data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Incident Rate", x, datasets, labels)
 
-st.button("Refresh")
+if st.button("Refresh"):
+    st.caching.clear_cache()
 
 
 # get configuration for each graph

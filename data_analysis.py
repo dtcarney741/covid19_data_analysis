@@ -106,12 +106,20 @@ def smooth_dataset(x_data, y_data, **kwargs):
                     new_y.append(9999999999999999999)
                 
         x_data = new_x
-        new_y = np.nan_to_num(new_y)  # make sure no numbers are invalid or savgol_filter will break
+        invalid_points = []
+        for i, data_point in enumerate(new_y):              # convert invalid numbers to 0 so that filter
+            if np.isnan(data_point) or data_point == None:  # but keep track of indexes so they can be
+                new_y[i] = 0                                # set back to invalid and not plotted once
+                invalid_points.append(i)                    # filter has been run
+
         y_data = signal.savgol_filter(
             new_y,
             kwargs.get("window_length", 9),
             kwargs.get("polyorder", 1)
         )
+        
+        for i in invalid_points:  # convert invalid datapoints back to nan because there was nothing there originally
+            y_data[i] = np.nan    # this is to gaurentee the dataset being at the same x values as those that were passed
         
     return x_data, y_data
 
@@ -164,4 +172,3 @@ def derivative(x_data, y_data):
     #     dx, dy = smooth_dataset(dx, dy, **kwargs)
     
     return dx, dy
-

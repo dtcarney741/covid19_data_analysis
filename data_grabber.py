@@ -17,11 +17,6 @@ def retrieve_data():
         
     subprocess.Popen("curl -L https://api.github.com/repos/CSSEGISandData/COVID-19/zipball/master --output data.zip", shell=True, stdout=subprocess.PIPE).wait()
     
-    
-    #make directories for data to be held
-    if not os.path.isdir(os.path.join(os.path.dirname("."), "data")):
-        os.mkdir(os.path.join(os.path.dirname("."), "data"))
-    
     output_folder = os.path.join(os.path.dirname("."), "data", str(date.today()))
     if os.path.isdir(output_folder):  # force remake of data folder
         shutil.rmtree(output_folder)
