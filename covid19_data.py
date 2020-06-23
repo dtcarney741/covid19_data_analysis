@@ -16,6 +16,8 @@ class Covid19_Tree_Node(object):
         self.deaths_time_series_data = []
         self.people_tested_time_series_data = []
         self.incident_rate_time_series_data = []
+        self.active_cases_time_series_data = []
+        self.recovered_cases_time_series_data = []
         self.parent = None
         
     
@@ -93,7 +95,53 @@ class Covid19_Tree_Node(object):
         for i in range(0,length):
             self.incident_rate_time_series_data.append(None)
 
-    
+    def initialize_active_cases(self,length):
+        """Description: Initialize the active cases data array
+        Inputs: length - number of data values to initailize
+        Outputs: self.incident_rate_time_series_data[0:length-1] is initialized with None
+        """
+        self.incident_active_cases_series_data = []
+        for i in range(0,length):
+            self.active_cases_time_series_data.append(None)
+
+    def initialize_recovered_cases(self,length):
+        """Description: Initialize the recovered cases data array
+        Inputs: length - number of data values to initailize
+        Outputs: self.incident_rate_time_series_data[0:length-1] is initialized with None
+        """
+        self.recovered_cases_time_series_data = []
+        for i in range(0,length):
+            self.recovered_cases_time_series_data.append(None)
+
+    def get_recovery_rate(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: recovery_rate[] where each element is defined as: self.recovered_cases_time_series_data[i] / self.confirmed_cases_time_series_data[i]
+        """
+        recovery_rate = []
+        for i in range(0, len(self.confirmed_cases_time_series_data)):
+            if self.recovered_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i] != 0:
+                val = self.recovered_cases_time_series_data[i] / self.confirmed_cases_time_series_data[i]
+            else:
+                val = None
+            recovery_rate.append(val)
+        return recovery_rate
+
+    def get_ratio_confirmed_cases_to_people_tested(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: ratio[] where each element is defined as: self.confirmed_cases_time_series_data[i] / self.people_tested_time_series_data[i]
+        """
+        ratio = []
+        for i in range(0, len(self.people_tested_time_series_data)):
+            if self.confirmed_cases_time_series_data[i] != None and self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i] != 0:
+                val = self.confirmed_cases_time_series_data[i] / self.people_tested_time_series_data[i]
+            else:
+                val = None
+            ratio.append(val)
+        return ratio
+        
+        
 class Covid19_Data(object):  
     
     def __init__(self):
@@ -281,7 +329,8 @@ class Covid19_Data(object):
                             country_node.initialize_confirmed_cases(len(self.time_series_dates))
                             country_node.initialize_deaths(len(self.time_series_dates))
                             country_node.initialize_people_tested(len(self.time_series_dates))
-                            country_node.initialize_incident_rate(len(self.time_series_dates))
+                            country_node.initialize_active_cases(len(self.time_series_dates))
+                            country_node.initialize_recovered_cases(len(self.time_series_dates))
                         else:
                             #check to make sure all data series for the country have been initialized
                             if not country_node.confirmed_cases_time_series_data:
@@ -290,19 +339,22 @@ class Covid19_Data(object):
                                 country_node.initialize_deaths(len(self.time_series_dates))
                             if not country_node.people_tested_time_series_data:
                                 country_node.initialize_people_tested(len(self.time_series_dates))
-                            if not country_node.incident_rate_time_series_data:
-                                country_node.initialize_incident_rate(len(self.time_series_dates))
+                            if not country_node.active_cases_time_series_data:
+                                country_node.initialize_active_cases(len(self.time_series_dates))
+                            if not country_node.recovered_cases_time_series_data:
+                                country_node.initialize_recovered_cases(len(self.time_series_dates))
 
                         # add the state to the country tree node if it's not already there
                         state_node = country_node.get_child_node(state)
                         if state_node == None:
                             state_node = Covid19_Tree_Node(state)
                             country_node.add_child(state_node)
-                            for date in self.time_series_dates:
-                                state_node.confirmed_cases_time_series_data.append(None)
-                                state_node.deaths_time_series_data.append(None)
-                                state_node.people_tested_time_series_data.append(None)
-                                state_node.incident_rate_time_series_data.append(None)
+                            state_node.initialize_confirmed_cases(len(self.time_series_dates))
+                            state_node.initialize_deaths(len(self.time_series_dates))
+                            state_node.initialize_people_tested(len(self.time_series_dates))
+                            state_node.initialize_incident_rate(len(self.time_series_dates))
+                            state_node.initialize_active_cases(len(self.time_series_dates))
+                            state_node.initialize_recovered_cases(len(self.time_series_dates))
                         else:
                             #check to make sure all data series for the state have been initialized
                             if not state_node.confirmed_cases_time_series_data:
@@ -313,6 +365,10 @@ class Covid19_Data(object):
                                 state_node.initialize_people_tested(len(self.time_series_dates))
                             if not state_node.incident_rate_time_series_data:
                                 state_node.initialize_incident_rate(len(self.time_series_dates))
+                            if not state_node.active_cases_time_series_data:
+                                state_node.initialize_active_cases(len(self.time_series_dates))
+                            if not state_node.recovered_cases_time_series_data:
+                                state_node.initialize_recovered_cases(len(self.time_series_dates))
                             
                         # add data to the appropriate data array for the state
                         i = self.time_series_dates.index(file_date_val)
@@ -332,10 +388,21 @@ class Covid19_Data(object):
                             rate = float(row[self.__us_data_field_locations["INCIDENT_RATE_COL"]])
                         except:
                             rate = 0
+                        try:
+                            active = float(row[self.__us_data_field_locations["ACTIVE_CASES_COL"]])
+                        except:
+                            active = 0
+                        try:
+                            recovered = float(row[self.__us_data_field_locations["RECOVERED_CASES_COL"]])
+                        except:
+                            recovered = 0
+
                         state_node.confirmed_cases_time_series_data[i] = cases
                         state_node.deaths_time_series_data[i] = deaths
                         state_node.people_tested_time_series_data[i] = tested
                         state_node.incident_rate_time_series_data[i] = rate
+                        state_node.active_cases_time_series_data[i] = active
+                        state_node.recovered_cases_time_series_data[i] = recovered
 
                         # aggregate the state data into the data array for the country
                         if country_node.confirmed_cases_time_series_data[i] == None:
@@ -349,10 +416,14 @@ class Covid19_Data(object):
                             country_node.people_tested_time_series_data[i] = tested
                         else:
                             country_node.people_tested_time_series_data[i] = country_node.people_tested_time_series_data[i] + tested
-                        if country_node.incident_rate_time_series_data[i] == None:
-                            country_node.incident_rate_time_series_data[i] = rate
+                        if country_node.active_cases_time_series_data[i] == None:
+                            country_node.active_cases_time_series_data[i] = active
                         else:
-                            country_node.incident_rate_time_series_data[i] = country_node.incident_rate_time_series_data[i] + rate
+                            country_node.active_cases_time_series_data[i] = country_node.active_cases_time_series_data[i] + active
+                        if country_node.recovered_cases_time_series_data[i] == None:
+                            country_node.recovered_cases_time_series_data[i] = recovered
+                        else:
+                            country_node.recovered_cases_time_series_data[i] = country_node.recovered_cases_time_series_data[i] + recovered
 
                     row_count = row_count + 1
     
@@ -459,6 +530,8 @@ class Covid19_Data(object):
         self.__us_data_field_locations["DEATHS_COL"] = -1
         self.__us_data_field_locations["PEOPLE_TESTED_COL"] = -1
         self.__us_data_field_locations["INCIDENT_RATE_COL"] = -1
+        self.__us_data_field_locations["ACTIVE_CASES_COL"] = -1
+        self.__us_data_field_locations["RECOVERED_CASES_COL"] = -1
 
         i = 0
         while not found_everything and i < len(row):
@@ -479,6 +552,12 @@ class Covid19_Data(object):
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "INCIDENT_RATE":
                 self.__us_data_field_locations["INCIDENT_RATE_COL"] = i
+                self.__us_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "RECOVERED":
+                self.__us_data_field_locations["RECOVERED_CASES_COL"] = i
+                self.__us_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "ACTIVE":
+                self.__us_data_field_locations["ACTIVE_CASES_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
 
             i = i + 1
