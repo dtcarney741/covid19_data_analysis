@@ -5,13 +5,15 @@ https://github.com/CSSEGISandData/COVID-19
 
 This script allows users to plot many different graphs relating to COVID-19 data:
 * Confirmed Cases vs. Date
-* Daily Cases per 1mil Population vs. Date
-* Daily Number of People Tested vs. Date
+* Recovered Cases vs. Date
+* Active Cases vs. Date
+* Deaths vs. Date
+* Daily Cases per 1mil Population vs. Date (Incident Rate)
 * Daily Rate of Confirmed Cases to People Tested vs. Date
-* New Cases vs. Date
 * Total People Tested vs. Date
+* Death Rate vs. Date
 
-This project was built using python3 and curl (to automatically grab data)
+This project was built using python3 with the help of streamlit and curl (to automatically grab data)
 
 ## Install
 
@@ -21,39 +23,16 @@ Other dependencies include ```curl```
 
 ## Usage
 
-Run ```python covid19_data_analysis.py``` or ```python3 covid19_data_analysis.py``` depending on os
+Run ```python covid19_data_analysis.py``` or ```python3 covid19_data_analysis.py``` depending on os for the old version that utilizes a cli (the only working plot is confirmed cases when utilizing this version and it only has US data)
+
+For the new version use ```streamlit run webserver.py``` and a webserver will start running at ```localhost:8501```
 
 ## Sample Output 
 
 <p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
-  <img src="img/confirmed_cases.png" width=1000>
-  Graph of Confirmed Cases vs. Date and its Derivative
+  <img src="img/sample1.png" width=1000>
+  Graph of Confirmed Cases vs. Date of US using new UI
 </p>
-
-<p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
-  <img src="img/new_cases.png"  width=1000>
-  Graph of Daily New Cases vs. Date
-</p>
-
-<p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
-  <img src="img/incident_rate.png"  width=1000>
-  Graph of Confirmed Cases per 1,000,000 people vs. Date
-
-<p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
-  <img src="img/ratio_graph.png" width=1000>
-  Graph of Confirmed Cases to People Tested vs. Date
-</p>
-
-<p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
-  <img src="img/people_tested.png"  width=1000>
-  Graph of People Tested vs. Date
-</p>
-
-<p style="border-width: 2px; border-color: black; border-style:solid;" align="center">
-  <img src="img/new_people_tested.png"  width=1000>
-  Graph of New People Tested vs. Date
-</p>
-
 
 
 ## License
@@ -64,9 +43,7 @@ In development with daily to weekly commits
 
 ## Features coming soon
 * Better error handling
-* Easier UI
-* Increased Portability
 * Portability Testing
-* Plots of Deaths vs. Date 
-* Plots for countries other than the USA
-* Smoothing on original plot, not just on derivative plots
+* More Types of Graphs 
+* Descriptions of what each graph shows
+* Ability to read data directly from github instead of having to save it to disk

@@ -3,5 +3,6 @@ datetime
 easygui
 matplotlib
 numpy
+plotly
 statsmodels
 streamlit

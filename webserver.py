@@ -6,14 +6,14 @@ Created on Mon Jun 15 22:06:37 2020
 @author: aiden
 """
 from datetime import date
-import streamlit as st
 import copy
-import os
 import numpy as np
+import os
+import streamlit as st
 
 import covid19_data
-import plot_handler
 import data_grabber
+import plot_handler
 
 
 @st.cache(hash_funcs={covid19_data.Covid19_Tree_Node: lambda _: None}, allow_output_mutation=True)
@@ -132,8 +132,17 @@ world_node = covid_data.time_series_data_tree
 # select the type of graph
 graph_type = st.sidebar.selectbox(
     "Graph Type", 
-    ["Confirmed Cases", "Deaths", "Testing", "Incident Plot"]
-    )
+    sorted([
+        "Confirmed Cases", 
+        "Deaths", 
+        "Testing", 
+        "Incident Plot",
+        "Active Cases",
+        "Recovered Cases",
+        "Death Rate",
+        "Confirmed Cases to People Tested Ratio"
+    ])
+)
 
 
 # find what areas to graph
@@ -188,6 +197,7 @@ if graph_type == "Confirmed Cases":
             if data_point is None:
                 datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Confirmed Cases", x, datasets, labels)
+
 elif graph_type == "Deaths":
     for node in plotted_areas:
         if node.deaths_time_series_data:
@@ -200,6 +210,7 @@ elif graph_type == "Deaths":
             if data_point is None:
                 datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Deaths", x, datasets, labels)
+
 elif graph_type == "Testing":
     for node in plotted_areas:
         if node.people_tested_time_series_data:
@@ -212,6 +223,7 @@ elif graph_type == "Testing":
             if data_point is None:
                 datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Tests", x, datasets, labels)
+
 elif graph_type == "Incident Plot":
     for node in plotted_areas:
         if node.incident_rate_time_series_data:
@@ -225,6 +237,67 @@ elif graph_type == "Incident Plot":
                 datasets[i][j] = np.nan
     plots = create_plot_handler(int_to_dates_lookup, "Date", "Incident Rate", x, datasets, labels)
 
+elif graph_type == "Active Cases":
+    for node in plotted_areas:
+        if node.incident_rate_time_series_data:
+            datasets.append(node.active_cases_time_series_data)
+            labels.append(get_label(node))
+        else:
+            st.warning("No Active Cases data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
+    plots = create_plot_handler(int_to_dates_lookup, "Date", "Active Cases", x, datasets, labels)
+
+elif graph_type == "Recovered Cases":
+    for node in plotted_areas:
+        if node.incident_rate_time_series_data:
+            datasets.append(node.recovered_cases_time_series_data)
+            labels.append(get_label(node))
+        else:
+            st.warning("No Recovered Cases data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
+    plots = create_plot_handler(int_to_dates_lookup, "Date", "Recovered Cases", x, datasets, labels)
+
+elif graph_type == "Death Rate":
+    for node in plotted_areas:
+        if node.deaths_time_series_data and node.confirmed_cases_time_series_data:
+            ratio = []
+            for deaths, confirmed in zip(node.deaths_time_series_data, node.confirmed_cases_time_series_data):
+                try:
+                    ratio.append(deaths / confirmed)
+                except TypeError:
+                    ratio.append(np.nan)
+                
+            datasets.append(ratio)
+            labels.append(get_label(node))
+        else:
+            st.warning("Death rate could not be calculated for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
+    plots = create_plot_handler(int_to_dates_lookup, "Date", "Death Rate", x, datasets, labels)
+    
+elif graph_type == "Confirmed Cases to People Tested Ratio":
+    for node in plotted_areas:
+        if node.incident_rate_time_series_data:
+            datasets.append(node.get_ratio_confirmed_cases_to_people_tested())
+            labels.append(get_label(node))
+        else:
+            st.warning("No Confirmed Cases to People Tested Ratio data was found for " + node.node_name)
+    for i, dataset in enumerate(datasets):
+        for j, data_point in enumerate(dataset):
+            if data_point is None:
+                datasets[i][j] = np.nan
+    plots = create_plot_handler(int_to_dates_lookup, "Date", "Cases to Tests Ratio", x, datasets, labels)
+    
+    
+    
 if st.button("Refresh"):
     st.caching.clear_cache()
 
