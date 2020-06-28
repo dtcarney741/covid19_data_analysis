@@ -235,7 +235,7 @@ elif graph_type == "Incident Plot":
         for j, data_point in enumerate(dataset):
             if data_point is None:
                 datasets[i][j] = np.nan
-    plots = create_plot_handler(int_to_dates_lookup, "Date", "Incident Rate", x, datasets, labels)
+    plots = create_plot_handler(int_to_dates_lookup, "Date", "Confirmed Cases per 100K Population", x, datasets, labels)
 
 elif graph_type == "Active Cases":
     for node in plotted_areas:

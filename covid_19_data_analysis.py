@@ -84,6 +84,7 @@ while (choice.upper() != 'Q'):
         selected_states.append('Wisconsin')
         selected_counties.append('Winnebago')
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
 
         selected_countries = []
         selected_states = []
@@ -107,4 +108,5 @@ while (choice.upper() != 'Q'):
         selected_states.append('Alabama')
         selected_counties.append('Jefferson')
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
        

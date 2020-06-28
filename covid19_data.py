@@ -113,6 +113,38 @@ class Covid19_Tree_Node(object):
         for i in range(0,length):
             self.recovered_cases_time_series_data.append(None)
 
+    def get_daily_new_cases(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: daily_new_cases[] where each element is defined as: self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
+                    and daily_new_cases[0] = None
+        """
+        daily_new_cases = []
+        daily_new_cases.append(None)
+        for i in range(1,len(self.confirmed_cases_time_series_data)):
+            if self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i-1] != None:
+                val = self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
+            else:
+                val = None
+            daily_new_cases.append(val)
+        return daily_new_cases
+
+    def get_daily_new_deaths(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: daily_new_deaths[] where each element is defined as: self.deaths_time_series_data[i] - self.deaths_time_series_data[i-1]
+                    and daily_new_deaths[0] = None
+        """
+        daily_new_deaths = []
+        daily_new_deaths.append(None)
+        for i in range(1,len(self.deaths_time_series_data)):
+            if self.deaths_time_series_data[i] != None and self.deaths_time_series_data[i-1] != None:
+                val = self.deaths_time_series_data[i] - self.deaths_time_series_data[i-1]
+            else:
+                val = None
+            daily_new_deaths.append(val)
+        return daily_new_deaths
+    
     def get_recovery_rate(self):
         """Description: Calculate and return list of derived data
         Inputs: None
@@ -170,6 +202,70 @@ class Covid19_Data(object):
             "INCIDENT_RATE_COL": -1
             }
 
+    def __set_node_data_values(self, node, data_types, data_values, index, aggregate_to_parent, absolute):
+        """Description: Sets the specified data values in the data arrays for a tree node at the specified index.
+        Inputs:
+            node - the tree node whose data values are to be updated
+            data_types - list containing which data types are to be updated.  Possible values are:
+                            'DEATHS', 'CONFIRMED', 'TESTED', 'INCIDENT', 'ACTIVE', 'RECOVERED'
+            data_values - list with the value to be set for the corresponding data type (list correspondance is 1 to 1 with data_types)
+            index - the list index into which the data value is to be placed
+            aggregate_to_parent - True or False to indicate whether the data should be summed into the parent node's data array
+            absolute - True or False to indicate whether the data array should be set to the absolute value or should be aggregated with existing data
+        Outputs:
+            node.XYZ_time_series_data[index] is initialized if it wasn't already
+            node.XYZ_time_series_data[index] is set as specified
+        """
+        i = 0
+        for data_type in data_types:
+            if data_type == 'DEATHS':
+                if not node.deaths_time_series_data:
+                    node.initialize_deaths(len(self.time_series_dates))
+                if absolute or node.deaths_time_series_data[index] == None:
+                    node.deaths_time_series_data[index] = data_values[i]
+                else:
+                    node.deaths_time_series_data[index] = node.deaths_time_series_data[index] + data_values[i]
+            elif data_type == 'CONFIRMED':
+                if not node.confirmed_cases_time_series_data:
+                    node.initialize_confirmed_cases(len(self.time_series_dates))
+                if absolute or node.confirmed_cases_time_series_data[index] == None:
+                    node.confirmed_cases_time_series_data[index] = data_values[i]
+                else:
+                    node.confirmed_cases_time_series_data[index] = node.confirmed_cases_time_series_data[index] + data_values[i]
+            elif data_type == 'TESTED':
+                if not node.people_tested_time_series_data:
+                    node.initialize_people_tested(len(self.time_series_dates))
+                if absolute or node.people_tested_time_series_data[index] == None:
+                    node.people_tested_time_series_data[index] = data_values[i]
+                else:
+                    node.people_tested_time_series_data[index] = node.people_tested_time_series_data[index] + data_values[i]
+            elif data_type == 'INCIDENT':
+                if not node.incident_rate_time_series_data:
+                    node.initialize_incident_rate(len(self.time_series_dates))
+                if absolute or node.incident_rate_time_series_data[index] == None:
+                    node.incident_rate_time_series_data[index] = data_values[i]
+                else:
+                    node.incident_rate_time_series_data[index] = node.incident_rate_time_series_data[index] + data_values[i]
+            elif data_type == 'ACTIVE':
+                if not node.active_cases_time_series_data:
+                    node.initialize_active_cases(len(self.time_series_dates))
+                if absolute or node.active_cases_time_series_data[index] == None:
+                    node.active_cases_time_series_data[index] = data_values[i]
+                else:
+                    node.active_cases_time_series_data[index] = node.active_cases_time_series_data[index] + data_values[i]
+            elif data_type == 'RECOVERED':
+                if not node.recovered_cases_time_series_data:
+                    node.initialize_recovered_cases(len(self.time_series_dates))
+                if absolute or node.recovered_cases_time_series_data[index] == None:
+                    node.recovered_cases_time_series_data[index] = data_values[i]
+                else:
+                    node.recovered_cases_time_series_data[index] = node.recovered_cases_time_series_data[index] + data_values[i]
+            i = i + 1
+            
+        if aggregate_to_parent and node.parent != None:
+            # recursive call for the parent node if we're supposed to aggregate.  Recursion ends when we get to the top of the tree since there is no parent.
+            self.__set_node_data_values(node.parent, data_types, data_values, index, aggregate_to_parent, absolute=False)
+
          
     def read_time_series_cases_data(self, filename):
         """Description: Reads the Johns Hopkins COVID-19 time series CSV file into the time_series_data dictionary
@@ -188,6 +284,12 @@ class Covid19_Data(object):
             us_file_type = True
         else:
             us_file_type = False
+
+        filename_split = filename.split("/")
+        if 'deaths' in filename_split[len(filename_split)-1]:
+            data_types = ['DEATHS']
+        else:
+            data_types = ['CONFIRMED']
         
         csv_file_obj = open(filename)
         reader_obj = csv.reader(csv_file_obj)
@@ -204,9 +306,14 @@ class Covid19_Data(object):
                     date_list = []
                     for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
                         date_list.append(datetime.datetime.strptime(row[col],'%m/%d/%y'))
-                        
-                    # TODO: date list should already be initialized, so no need to do this here - need to add initialize code
-                    self.time_series_dates = date_list
+
+                    if not self.time_series_dates:
+                        # save the first date list read in to self.time_series_dates
+                        # this behavior assumes that the dates in any subsequenty time series files read in after the first one are within range
+                        # of the dates from the first file.  If this is not true, this function will crash
+                        # TODO: Come up with a better way to initialize the date list so that any file that is read in does not make the program crash and data already captured is updated to align to the new date list
+                        self.time_series_dates = date_list
+
                 elif row_count > 10:
                     print("ERROR: read_time_series_cases_data - invalid data file")
                     return False
@@ -225,7 +332,6 @@ class Covid19_Data(object):
                 if country_node == None:
                     country_node = Covid19_Tree_Node(country)
                     self.time_series_data_tree.add_child(country_node)
-                    country_node.initialize_confirmed_cases(len(self.time_series_dates))
 
                 # add the state to the country tree node if it's not already there
                 if state != "":
@@ -233,20 +339,15 @@ class Covid19_Data(object):
                     if state_node == None:
                         state_node = Covid19_Tree_Node(state)
                         country_node.add_child(state_node)
-                        state_node.initialize_confirmed_cases(len(self.time_series_dates))
                 else:
                     state_node = None
                 
-                # add the county to the state tree node if it's not already there (if it is already there that is an error condition because the same county should not be encountered twice in the data)
+                # add the county to the state tree node if it's not already there
                 if county != None and county != "":
                     county_node = state_node.get_child_node(county)
                     if county_node == None:
                         county_node = Covid19_Tree_Node(county)
                         state_node.add_child(county_node)
-                        county_node.initialize_confirmed_cases(len(self.time_series_dates))
-                    else:
-                        print("ERROR: read_time_series_cases_data - duplicate county found")
-                        return False
                 else:
                     county_node = None
                     
@@ -254,25 +355,15 @@ class Covid19_Data(object):
                 i = 0
                 for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
                     j = self.time_series_dates.index(date_list[i])
-                    cases = int(float(row[col]))
+                    data_val = [int(float(row[col]))]
 
                     if county_node != None:
-                        county_node.confirmed_cases_time_series_data[j] = cases
-                        # aggregate county data to state
-                        if state_node.confirmed_cases_time_series_data[j] == None:
-                            state_node.confirmed_cases_time_series_data[j] = cases
-                        else:
-                            state_node.confirmed_cases_time_series_data[j] = state_node.confirmed_cases_time_series_data[j] + cases
-                        # aggregate county data to country
-                        if country_node.confirmed_cases_time_series_data[j] == None:
-                            country_node.confirmed_cases_time_series_data[j] = cases
-                        else:
-                            country_node.confirmed_cases_time_series_data[j] = country_node.confirmed_cases_time_series_data[j] + cases
+                        self.__set_node_data_values(county_node, data_types, data_val, index=j, aggregate_to_parent=True, absolute=True)
                     elif state_node != None:
-                        state_node.confirmed_cases_time_series_data[j] = cases
+                        self.__set_node_data_values(state_node, data_types, data_val, index=j, aggregate_to_parent=False, absolute=True)
                         #todo figure out whether we should aggregate state data up to country                        
                     elif country_node != None:
-                        country_node.confirmed_cases_time_series_data[j] = cases
+                        self.__set_node_data_values(country_node, data_types, data_val, index=j, aggregate_to_parent=False, absolute=True)
 
                     i = i + 1
                         
@@ -431,6 +522,24 @@ class Covid19_Data(object):
                  
         return(True)
        
+    def is_date(date):
+        """Description: Determines whether a string is a valid date in the defined formats
+        Inputs:
+            date - string value for the date to be evaluated
+        Outputs:
+            return - True if string is a valid date, False if string is not a valid date
+        """
+        # Defined formats for valid dates
+        fmts = ('%m/%d/%y', '%m/%d/%Y')
+
+        for fmt in fmts:
+            try:
+                d = datetime.datetime.strptime(date, fmt)
+                return True
+            except:
+                pass
+        
+        return False
         
     def __map_time_series_us_locations(self,row, row_num):
         """Description: Fills in the dictionary of locations with the associated row and column index
@@ -460,8 +569,8 @@ class Covid19_Data(object):
             elif row[i].upper() == "PROVINCE_STATE":
                 self.__time_series_field_locations["STATE_NAME_COL"] = i
                 self.__time_series_field_locations["HEADER_ROW"] = row_num
-            elif row[i].upper() == "COMBINED_KEY":
-                self.__time_series_field_locations["FIRST_DATE_COL"] = i+1
+            elif Covid19_Data.is_date(row[i].upper()):
+                self.__time_series_field_locations["FIRST_DATE_COL"] = i
                 self.__time_series_field_locations["LAST_DATE_COL"] = len(row)-1
                 self.__time_series_field_locations["HEADER_ROW"] = row_num
             i = i + 1
@@ -499,8 +608,8 @@ class Covid19_Data(object):
             elif row[i].upper() == "PROVINCE/STATE":
                 self.__time_series_field_locations["STATE_NAME_COL"] = i
                 self.__time_series_field_locations["HEADER_ROW"] = row_num
-            elif row[i].upper() == "LONG":
-                self.__time_series_field_locations["FIRST_DATE_COL"] = i+1
+            elif Covid19_Data.is_date(row[i].upper()):
+                self.__time_series_field_locations["FIRST_DATE_COL"] = i
                 self.__time_series_field_locations["LAST_DATE_COL"] = len(row)-1
                 self.__time_series_field_locations["HEADER_ROW"] = row_num
             i = i + 1
@@ -755,7 +864,7 @@ class Covid19_Data(object):
         return(keys)
 
     def get_dates(self):
-        """Description: Accessor function to get list of dates for data points
+        """Description: Accessor function to get a copy of the list of dates for data points
         Inputs: None
         Outputs:
           return - [dates]
@@ -866,22 +975,15 @@ class Covid19_Data(object):
         while gui.mainloop(): pass
 
         
-    def plot_deaths_data(self, state_list, county_list, key_list):
+    def plot_deaths_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
+            country_list - list of countries in country / state / county path
+            state_list - optional, list of states in country / state / county path
+            county_list - optional, list of counties in country / state / county path
         Outpus:
             A plot window is opened
         """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-        
         start_dates = []
         end_dates = []
         
@@ -889,24 +991,41 @@ class Covid19_Data(object):
         y_datasets = []
         labels = []
 
-        for key_val in key_list:
-            if key_val in self.__time_series_data["DEATHS"]:
-                x = self.__time_series_dates
+
+        for i in range(0, len(country_list)):
+            country_node = self.time_series_data_tree.get_child_node(country_list[i])
+            if (country_node == None):
+                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
+                return(False)
+            state_node = country_node.get_child_node(state_list[i])
+            if (state_node == None):
+                plot_node = country_node
+                label_string = country_list[i] + " - All"
+            else:
+                county_node = state_node.get_child_node(county_list[i])                    
+                if (county_node == None):
+                    plot_node = state_node
+                    label_string = country_list[i] + ", " + state_list[i] + " - All"
+                else:
+                    plot_node = county_node
+                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
+            
+            if plot_node.confirmed_cases_time_series_data:
+                x = self.time_series_dates
                 
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-                y = self.__time_series_data["DEATHS"][key_val]
+                y = plot_node.deaths_time_series_data
                 
                 x_datasets.append(x)
                 y_datasets.append(y)
-                labels.append(key_val)
+                labels.append(label_string)
 
             else:
-                print("invalid state / county pair value: ", key_val)
+                print("No deaths data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
                 return(False)
-            
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
         
