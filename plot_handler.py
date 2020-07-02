@@ -12,18 +12,16 @@ import plotly.graph_objects as go
 import data_analysis
 
 
-class PlotHandler:
+class DataHandler:
     """
-    integeration between datasets and a plotly plot
-    has options for adding derivative graphs
+    class that contains methods for modifying and storing data that is to 
+    be graphed. Contains methods for smoothing data and adding derivative plots
+    up to the nth derivative
     """
-    def __init__(self, integer_to_date_table, x_axis_label, y_axis_label, x_datasets, y_datasets, labels):        
+    def __init__(self, integer_to_date_table, x_datasets, y_datasets, labels):        
         self.num_plots = 0
 
         self.integer_to_date_table = integer_to_date_table
-        self.x_axis_label = x_axis_label
-        self.y_axis_label = y_axis_label
-
 
         self.original_x = []  # keep copy of unmodified data to do math with
         self.original_y = []
@@ -101,77 +99,15 @@ class PlotHandler:
         print(self.num_plots)
 
 
-    def update_plot(self, index):
-        if index > self.num_plots or index < 0:
-            raise IndexError("No dataset exists for i=" + str(index))
-        
-        if index > 0:
-            suf = lambda n: "%d%s"%(n,{1:"st",2:"nd",3:"rd"}.get(n if n<20 else n%10,"th"))
-            title = suf(index) + " derivative of " + self.y_axis_label + " vs. " + self.x_axis_label
-        else:
-            title = self.y_axis_label + " vs. " + self.x_axis_label
-        
-        plot = None
-        plot = go.Figure()
-        plot.update_xaxes(
-            rangeslider_visible=False,
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=7, label="1w", step="day", stepmode="backward"),
-                    dict(count=14, label="2w", step="day", stepmode="backward"),
-                    dict(count=1, label="1m", step="month", stepmode="backward"),
-                    dict(count=6, label="6m", step="month", stepmode="backward"),
-                    dict(count=1, label="YTD", step="year", stepmode="todate"),
-                    dict(count=1, label="1y", step="year", stepmode="backward"),
-                    dict(step="all")
-                ])
-            )
-        )
-        
-        for x, y, label in zip(self.x_datasets[index], self.y_datasets[index], self.labels_dataset[index]):
-            x_dates = [ datetime.strptime(self.integer_to_date_table.get(integer), '%m-%d-%Y') for integer in x ]
-            plot.add_trace(
-                go.Scatter(
-                    x=x_dates, 
-                    y=y, 
-                    mode="lines+markers", 
-                    name=label
-                )
-            )
-            
-        plot.update_layout(
-            title=title,
-            xaxis_title=self.x_axis_label,
-            yaxis_title=self.y_axis_label,
-            font=dict(
-                family="Courier New, monospace",
-                size=18,
-                color="#7f7f7f"
-            ),
-            showlegend=True,
-            plot_bgcolor="rgb(255, 255, 255)"
-        )
-        
-        plot.update_xaxes(
-            tickangle=-45, 
-            showgrid=True, 
-            gridwidth=1, 
-            gridcolor="gray"
-        )
-        plot.update_yaxes(
-            tickangle=0, 
-            showgrid=True, 
-            gridwidth=1, 
-            gridcolor="gray", 
-            zeroline=True, 
-            zerolinewidth=2, 
-            zerolinecolor="black"
-        )
-        
-        return plot
-        
-
     def new_derivative(self):
+        """
+        Creates a new derivative of the dataset
+
+        Returns
+        -------
+        None.
+
+        """
         x_dataset = []
         y_dataset = []
         for x, y in zip(self.x_datasets[-1], self.y_datasets[-1]):
@@ -186,6 +122,21 @@ class PlotHandler:
 
 
     def update_configuration(self, index, new_configuration):
+        """
+        Updates the configuration parameters
+
+        Parameters
+        ----------
+        index : int
+            The index for which to change the parameters for.
+        new_configuration : dict
+            Dictionary containing the configuration parameters.
+
+        Returns
+        -------
+        None.
+
+        """
         if index < self.num_plots and index >= 0:
             self.plot_configurations[index] = new_configuration
 
@@ -243,52 +194,180 @@ class PlotHandler:
             self.update_plot_data(index + 1)  # update all following derivative graphs
 
 
+    def format_data(self, y_axis_title, x_axis_title):
+        """
+        Returns formatted data about a dataset that is condensed and easy to parse
+
+        Parameters
+        ----------
+        y_axis_title : string
+            Label to put on the y axis.
+        x_axis_title : string
+            Label to put on the x axis.
+
+        Returns
+        -------
+        plot_entry : list
+            List of datasets where each iteration is the nth derivative of the original
+            data and i=0 is the original data. Dataset contains the data, label, and 
+            the axis titles
+
+        """
+        plot_entry = []
+        for index in range(self.num_plots):
+            x_data = []
+            y_data = []
+            labels = []
+            for x, y, label in zip(self.x_datasets[index], self.y_datasets[index], self.labels_dataset[index]):
+                x_dates = [ datetime.strptime(self.integer_to_date_table.get(integer), '%m-%d-%Y') for integer in x ]
+                x_data.append(x_dates)
+                y_data.append(y)
+                labels.append(label)
+            
+            plot_entry.append({
+                "x_data":x_data,
+                "y_data":y_data,
+                "labels":labels,
+                "y_axis_title":("Change in " * index) + y_axis_title,
+                "x_axis_title":x_axis_title
+            })
+            
+        return plot_entry
 
 
-    # def mainloop(self):
-    #     """
-    #     The mainloop for the matplotlib window. Handles all plot updates that
-    #     were set as a result of user interaction.
 
-    #     Returns
-    #     -------
-    #     still_running : Bool
-    #         If the window is open and still active. If false, then there
-    #         will be no future user interaction with the matplotlib window
-    #         and user iteraction can continue on
+def create_multi_axis_plots(plot_entries, add_axis_title_to_legend=False):  
+    """
+    Creates plotly plot objects with multiple y axes from a dictionary
+    of datasets
 
-    #     """
-    #     # make sure all config buttons exist and data is updated
-    #     for entry in self.config_btns:
-    #         if self.config_btns[entry][0] is None:  # if button dne
-    #             btn_size = .7 / (len(self.config_btns))
-    #             btn = matplotlib.widgets.Button(plt.axes([(((entry - 1)*btn_size) + 0.3), 0, btn_size, 0.05]), ("Config dy/dx graph - " + str(entry)))
-    #             btn.on_clicked(self.__make_labmda(entry))
-    #             self.config_btns[entry][0] = btn
-    #         if self.config_btns[entry][1] is None:  # if config dne
-    #             config = {
-    #                 "smooth":False,
-    #                 "window_length":9,
-    #                 "polyorder":1,
-    #                 "iters":2,
-    #                 "start_threshold":3,
-    #                 "threshold_stepdown":0
-    #             }
-    #             self.config_btns[entry][1] = config
+    Parameters
+    ----------
+    plot_entries : dict
+        data in format 
+        data = {
+            plot0:{
+                y0:[data_entry1, data_entry2],
+                y1:[data_entry1, data_entry2]
+                }
+            plot1:{
+                y0:[data_entry1, data_entry2],
+                y1:[data_entry1, data_entry2]
+                }
+        }
 
-    #     # update plots that changed
-    #     with self.mainloop_lock:
-    #         for plot in self.plot_updates:
-    #             self.graph_subplot(plot[0], plot[1])
-                
-    #         self.plot_updates = []
+    Returns
+    -------
+    plot_objects : list
+        List of plotly objects.
 
-    #         if not plt.fignum_exists(self.figure.number) and self.allow_exit:
-    #             still_running = False
-    #         else:
-    #             still_running = True
+    """
+    plot_objects = []
 
-    #     plt.pause(.1)
+    for plot_number, plots in plot_entries.items():     
+        # create plot object
+        plot = go.Figure()
+        plot.update_xaxes(
+            rangeslider_visible=False,
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=7, label="1w", step="day", stepmode="backward"),
+                    dict(count=14, label="2w", step="day", stepmode="backward"),
+                    dict(count=1, label="1m", step="month", stepmode="backward"),
+                    dict(count=6, label="6m", step="month", stepmode="backward"),
+                    dict(count=1, label="YTD", step="year", stepmode="todate"),
+                    dict(count=1, label="1y", step="year", stepmode="backward"),
+                    dict(step="all")
+                ])
+            )
+        )
+        
+        y_axis_titles = []
+        x_axis_title = ""
 
-    #     return still_running
+        # add data to the plot on the correct y axis
+        for y_axis_id, dataset in plots.items(): 
+            for entry in dataset:
+                for x, y, label in zip(entry.get("x_data"), entry.get("y_data"), entry.get("labels")):
+                    if add_axis_title_to_legend:
+                        name = label + " " + entry.get("y_axis_title")
+                    else:
+                        name = label
+                        
+                    if y_axis_id > 1:
+                        plot.add_trace(
+                            go.Scatter(
+                                x=x, 
+                                y=y, 
+                                mode="lines+markers", 
+                                name=name,
+                                yaxis=("y" + str(y_axis_id))
+                            )
+                        )
+                    else:
+                        plot.add_trace(
+                            go.Scatter(
+                                x=x, 
+                                y=y, 
+                                mode="lines+markers", 
+                                name=name,
+                            )
+                        )
+                    
+                y_axis_titles.append(entry.get("y_axis_title"))   # axis titles will be overwritten with each iteration but they should
+                x_axis_title = entry.get("x_axis_title")          # all be the same so it will not matter
+
+                if y_axis_id > 1:
+                    plot.update_layout(
+                        **{
+                            "yaxis" + str(y_axis_id):dict(
+                                title=entry.get("y_axis_title"),
+                                side=("right" if y_axis_id % 2 == 0 else "left"),
+                                overlaying="y"
+                            )
+                        }
+                    )
+                else:
+                    plot.update_layout(
+                        yaxis=dict(title=entry.get("y_axis_title"))
+                    )
+
+        title = " and ".join(set(y_axis_titles)) + " vs. " + x_axis_title
+        if len(dataset) > 1:
+            plot.update_layout(yaxis=dict(title=" and ".join(set(y_axis_titles))))
+            
+        plot.update_layout(
+            title=title,
+            xaxis=dict(
+                title=x_axis_title
+            ),
+            font=dict(
+                family="Courier New, monospace",
+                size=14,
+                color="#7f7f7f"
+            ),
+            showlegend=True,
+            legend=dict(x=1.2, y=1.1),
+            plot_bgcolor="rgb(255, 255, 255)"
+        )
+        
+        plot.update_xaxes(
+            tickangle=-45, 
+            showgrid=True, 
+            gridwidth=1, 
+            gridcolor="gray"
+        )
+        plot.update_yaxes(
+            tickangle=0, 
+            showgrid=True, 
+            gridwidth=1, 
+            gridcolor="gray", 
+            zeroline=True, 
+            zerolinewidth=2, 
+            zerolinecolor="black"
+        )
+        
+        plot_objects.append(plot)
+    
+    return plot_objects
 

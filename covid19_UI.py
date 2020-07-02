@@ -1,6 +1,6 @@
+import covid19_data
 import easygui as eg
 import os
-import covid19_data
 
 import covid19_data
  
