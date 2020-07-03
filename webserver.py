@@ -457,15 +457,17 @@ for i in range(1, plots_data[0][0].num_plots):
     a = st.empty()
     if a.button("Remove Derivative", key="5" + str(i)):
         for dataset in plots_data:
-            dataset.remove_derivative_dataset(i)
+            for data_entry in dataset:
+                data_entry.remove_derivative_dataset(i)
         a.empty()
     
     else:
         data = get_configuration(i)
             
         for dataset in plots_data:
-            dataset.update_configuration(i, data)
-            dataset.update_plot_data(i)
+            for data_entry in dataset:
+                data_entry.update_configuration(i, data)
+                data_entry.update_plot_data(i)
         
         if st.button("New Derivative", key="6" + str(i)):
             for dataset in plots_data:
