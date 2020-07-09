@@ -94,7 +94,7 @@ while (choice.upper() != 'Q'):
         selected_counties.append('Winnebago')
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
-
+        
         selected_countries = []
         selected_states = []
         selected_counties = []
@@ -119,3 +119,30 @@ while (choice.upper() != 'Q'):
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
        
+        selected_countries = []
+        selected_states = []
+        selected_counties = []
+        selected_countries.append("US")
+        selected_states.append('Florida')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Texas')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('California')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Arizona')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('North Carolina')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Georgia')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Wisconsin')
+        selected_counties.append('None')
+        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)

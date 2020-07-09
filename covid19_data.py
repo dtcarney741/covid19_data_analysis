@@ -159,6 +159,22 @@ class Covid19_Tree_Node(object):
                 val = None
             daily_new_deaths.append(val)
         return daily_new_deaths
+
+    def get_daily_new_people_tested(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: daily_new_people_tested[] where each element is defined as: self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+                    and daily_new_people_tested[0] = None
+        """
+        daily_new_people_tested = []
+        daily_new_people_tested.append(None)
+        for i in range(1,len(self.people_tested_time_series_data)):
+            if self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i-1] != None:
+                val = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+            else:
+                val = None
+            daily_new_people_tested.append(val)
+        return daily_new_people_tested
     
     def get_recovery_rate(self):
         """Description: Calculate and return list of derived data
@@ -187,7 +203,25 @@ class Covid19_Tree_Node(object):
                 val = None
             ratio.append(val)
         return ratio
-        
+
+    def get_daily_ratio_confirmed_cases_to_people_tested(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: ratio[] where each element is defined as: daily_confirmed[i] / daily_tested[i]
+            daily_confirmed = self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
+            daily_tested = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+        """
+        cases = self.get_daily_new_cases()
+        tested = self.get_daily_new_people_tested()
+        ratio = []
+        for i in range(0, len(cases)):
+            if cases[i] and tested[i] and tested[i] != 0:
+                ratio.append(cases[i]/tested[i])
+            else:
+                ratio.append(None)
+                
+        return ratio
+
         
 class Covid19_Data(object):  
     
@@ -569,7 +603,7 @@ class Covid19_Data(object):
                         if county_node == None:
                             county_node = Covid19_Tree_Node(county)
                             state_node.add_child(county_node)
-                        data_node = state_node
+                        data_node = county_node
                     else:
                         county_node = None
                 else:
@@ -1565,41 +1599,44 @@ class Covid19_Data(object):
         while gui.mainloop(): pass 
     
 
-    def plot_daily_ratio_cases_to_people_tested_data(self, state_list, county_list, key_list):
+    def plot_daily_ratio_cases_to_people_tested_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
+            country_list - list of countries in country / state / county path
+            state_list - optional, list of states in country / state / county path
+            county_list - optional, list of counties in country / state / county path
         Outpus:
             A plot window is opened
         """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-
         start_dates = []
         end_dates = []
         
         x_datasets = []
         y_datasets = []
         labels = []
-        
-        for key_val in key_list:
-            if key_val in self.__time_series_data["PEOPLE TESTED"]:
-                [x, cases] = self.get_daily_new_cases(state=None, county=None, key=key_val)
-                [x, tested] = self.get_daily_new_people_tested(state=None, county=None, key=key_val)
-                ratio = []
-                for i in range(0,len(x)):
-                    if cases[i] == None or tested[i] == None:
-                        ratio.append(None)
-                    elif tested[i] == 0:
-                        ratio.append(None)
-                    else:
-                        ratio.append(cases[i]/tested[i])
+
+
+        for i in range(0, len(country_list)):
+            country_node = self.time_series_data_tree.get_child_node(country_list[i])
+            if (country_node == None):
+                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
+                return(False)
+            state_node = country_node.get_child_node(state_list[i])
+            if (state_node == None):
+                plot_node = country_node
+                label_string = country_list[i] + " - All"
+            else:
+                county_node = state_node.get_child_node(county_list[i])                    
+                if (county_node == None):
+                    plot_node = state_node
+                    label_string = country_list[i] + ", " + state_list[i] + " - All"
+                else:
+                    plot_node = county_node
+                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
+            
+            if plot_node.confirmed_cases_time_series_data and plot_node.people_tested_time_series_data:
+                x = self.time_series_dates
+                ratio = plot_node.get_daily_ratio_confirmed_cases_to_people_tested()
                     
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
@@ -1609,10 +1646,10 @@ class Covid19_Data(object):
                 
                 x_datasets.append(x)
                 y_datasets.append(ratio)
-                labels.append(key_val)
+                labels.append(label_string)
                 
             else:
-                print("invalid state / county pair value: ", key_val)
+                print("invalid country / state / county node value: ", country_list[i], state_list[i], county_list[i])
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
