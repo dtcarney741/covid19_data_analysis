@@ -96,7 +96,6 @@ class DataHandler:
         self.plot_configurations = self.plot_configurations[:index]
         
         self.num_plots = len(self.x_datasets)
-        print(self.num_plots)
 
 
     def new_derivative(self):
@@ -290,7 +289,7 @@ def create_multi_axis_plots(plot_entries, add_axis_title_to_legend=False):
             for entry in dataset:
                 for x, y, label in zip(entry.get("x_data"), entry.get("y_data"), entry.get("labels")):
                     if add_axis_title_to_legend:
-                        name = label + " " + entry.get("y_axis_title")
+                        name = label + " - " + entry.get("y_axis_title")
                     else:
                         name = label
                         
