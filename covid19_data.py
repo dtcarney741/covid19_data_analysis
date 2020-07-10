@@ -1,5 +1,6 @@
 import csv
 import datetime
+import os
 import requests
 
 import github_directory_tree
@@ -19,6 +20,10 @@ class Covid19_Tree_Node(object):
         self.incident_rate_time_series_data = []
         self.active_cases_time_series_data = []
         self.recovered_cases_time_series_data = []
+        self.population = None
+        self.hospitalizations_time_series_data = []
+        self.latitude = None
+        self.longitude = None
         self.parent = None
         
     
@@ -101,7 +106,7 @@ class Covid19_Tree_Node(object):
         Inputs: length - number of data values to initailize
         Outputs: self.incident_rate_time_series_data[0:length-1] is initialized with None
         """
-        self.incident_active_cases_series_data = []
+        self.active_cases_time_series_data = []
         for i in range(0,length):
             self.active_cases_time_series_data.append(None)
 
@@ -113,6 +118,15 @@ class Covid19_Tree_Node(object):
         self.recovered_cases_time_series_data = []
         for i in range(0,length):
             self.recovered_cases_time_series_data.append(None)
+
+    def initialize_hospitalizations(self,length):
+        """Description: Initialize the recovered cases data array
+        Inputs: length - number of data values to initailize
+        Outputs: self.hospitalizations_time_series_data[0:length-1] is initialized with None
+        """
+        self.hospitalizations_time_series_data = []
+        for i in range(0,length):
+            self.hospitalizations_time_series_data.append(None)
 
     def get_daily_new_cases(self):
         """Description: Calculate and return list of derived data
@@ -145,6 +159,22 @@ class Covid19_Tree_Node(object):
                 val = None
             daily_new_deaths.append(val)
         return daily_new_deaths
+
+    def get_daily_new_people_tested(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: daily_new_people_tested[] where each element is defined as: self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+                    and daily_new_people_tested[0] = None
+        """
+        daily_new_people_tested = []
+        daily_new_people_tested.append(None)
+        for i in range(1,len(self.people_tested_time_series_data)):
+            if self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i-1] != None:
+                val = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+            else:
+                val = None
+            daily_new_people_tested.append(val)
+        return daily_new_people_tested
     
     def get_recovery_rate(self):
         """Description: Calculate and return list of derived data
@@ -173,7 +203,25 @@ class Covid19_Tree_Node(object):
                 val = None
             ratio.append(val)
         return ratio
-        
+
+    def get_daily_ratio_confirmed_cases_to_people_tested(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: ratio[] where each element is defined as: daily_confirmed[i] / daily_tested[i]
+            daily_confirmed = self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
+            daily_tested = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+        """
+        cases = self.get_daily_new_cases()
+        tested = self.get_daily_new_people_tested()
+        ratio = []
+        for i in range(0, len(cases)):
+            if cases[i] and tested[i] and tested[i] != 0:
+                ratio.append(cases[i]/tested[i])
+            else:
+                ratio.append(None)
+                
+        return ratio
+
         
 class Covid19_Data(object):  
     
@@ -196,20 +244,38 @@ class Covid19_Data(object):
             }
         self.__us_data_field_locations = {
             "HEADER_ROW": -1,
-            "COUNTRY_COL": -1,
+            "COUNTRY_NAME_COL": -1,
             "STATE_NAME_COL": -1,
+            "LATITUDE_COL": -1,
+            "LONGITUDE_COL": -1,
             "CONFIRMED_CASES_COL": -1,
             "DEATHS_COL": -1,
             "PEOPLE_TESTED_COL": -1,
-            "INCIDENT_RATE_COL": -1
+            "INCIDENT_RATE_COL": -1,
+            "ACTIVE_CASES_COL": -1,
+            "RECOVERED_CASES_COL": -1,
+            "PEOPLE_HOSPITALIZED_COL": -1
             }
+        self.__world_data_field_locations = {
+                "HEADER_ROW": -1,
+                "COUNTRY_NAME_COL": -1,
+                "STATE_NAME_COL": -1,
+                "COUNTY_NAME_COL": -1,
+                "LATITUDE_COL": -1,
+                "LONGITUDE_COL": -1,
+                "CONFIRMED_CASES_COL": -1,
+                "DEATHS_COL": -1,
+                "INCIDENT_RATE_COL": -1,
+                "ACTIVE_CASES_COL": -1,
+                "RECOVERED_CASES_COL": -1
+                }
 
     def __set_node_data_values(self, node, data_types, data_values, index, aggregate_to_parent, absolute):
         """Description: Sets the specified data values in the data arrays for a tree node at the specified index.
         Inputs:
             node - the tree node whose data values are to be updated
             data_types - list containing which data types are to be updated.  Possible values are:
-                            'DEATHS', 'CONFIRMED', 'TESTED', 'INCIDENT', 'ACTIVE', 'RECOVERED'
+                            'DEATHS', 'CONFIRMED', 'TESTED', 'INCIDENT', 'ACTIVE', 'RECOVERED', 'HOSPITALIZED'
             data_values - list with the value to be set for the corresponding data type (list correspondance is 1 to 1 with data_types)
             index - the list index into which the data value is to be placed
             aggregate_to_parent - True or False to indicate whether the data should be summed into the parent node's data array
@@ -225,43 +291,51 @@ class Covid19_Data(object):
                     node.initialize_deaths(len(self.time_series_dates))
                 if absolute or node.deaths_time_series_data[index] == None:
                     node.deaths_time_series_data[index] = data_values[i]
-                else:
+                elif data_values[i]:
                     node.deaths_time_series_data[index] = node.deaths_time_series_data[index] + data_values[i]
             elif data_type == 'CONFIRMED':
                 if not node.confirmed_cases_time_series_data:
                     node.initialize_confirmed_cases(len(self.time_series_dates))
                 if absolute or node.confirmed_cases_time_series_data[index] == None:
                     node.confirmed_cases_time_series_data[index] = data_values[i]
-                else:
+                elif data_values[i]:
                     node.confirmed_cases_time_series_data[index] = node.confirmed_cases_time_series_data[index] + data_values[i]
             elif data_type == 'TESTED':
                 if not node.people_tested_time_series_data:
                     node.initialize_people_tested(len(self.time_series_dates))
                 if absolute or node.people_tested_time_series_data[index] == None:
                     node.people_tested_time_series_data[index] = data_values[i]
-                else:
+                elif data_values[i]:
                     node.people_tested_time_series_data[index] = node.people_tested_time_series_data[index] + data_values[i]
             elif data_type == 'INCIDENT':
                 if not node.incident_rate_time_series_data:
                     node.initialize_incident_rate(len(self.time_series_dates))
                 if absolute or node.incident_rate_time_series_data[index] == None:
                     node.incident_rate_time_series_data[index] = data_values[i]
-                else:
+                elif data_values[i]:
                     node.incident_rate_time_series_data[index] = node.incident_rate_time_series_data[index] + data_values[i]
             elif data_type == 'ACTIVE':
                 if not node.active_cases_time_series_data:
                     node.initialize_active_cases(len(self.time_series_dates))
                 if absolute or node.active_cases_time_series_data[index] == None:
                     node.active_cases_time_series_data[index] = data_values[i]
-                else:
+                elif data_values[i]:
                     node.active_cases_time_series_data[index] = node.active_cases_time_series_data[index] + data_values[i]
             elif data_type == 'RECOVERED':
                 if not node.recovered_cases_time_series_data:
                     node.initialize_recovered_cases(len(self.time_series_dates))
                 if absolute or node.recovered_cases_time_series_data[index] == None:
                     node.recovered_cases_time_series_data[index] = data_values[i]
-                else:
+                elif data_values[i]:
                     node.recovered_cases_time_series_data[index] = node.recovered_cases_time_series_data[index] + data_values[i]
+            elif data_type == 'HOSPITALIZED':
+                if not node.hospitalizations_time_series_data:
+                    node.initialize_hospitalizations(len(self.time_series_dates))
+                if absolute or node.hospitalizations_time_series_data[index] == None:
+                    node.hospitalizations_time_series_data[index] = data_values[i]
+                elif data_values[i]:
+                    node.hospitalizations_time_series_data[index] = node.hospitalizations_time_series_data[index] + data_values[i]
+                    
             i = i + 1
             
         if aggregate_to_parent and node.parent != None:
@@ -269,10 +343,13 @@ class Covid19_Data(object):
             self.__set_node_data_values(node.parent, data_types, data_values, index, aggregate_to_parent, absolute=False)
 
          
-    def read_time_series_cases_data(self, url):
+    def read_time_series_data(self, filename, url):
         """Description: Reads the Johns Hopkins COVID-19 time series CSV file into the time_series_data dictionary
         Inputs:
-            filename - string with name and path of file to be opened
+            filename - optional string with name and path of file to be opened
+            url - optional string with url name and path of file to be opened from github.
+            
+            Either filename or ulr should be supplied.  The value in filename if supplied takes prescendence
         Outputs:
           self.__time_series_field_locations - updated dictionary with locations added
           self.__time_series_data - dictionary containing the time series data that was read in, organized as:
@@ -281,22 +358,40 @@ class Covid19_Data(object):
                                      ...}
           return - True if successful, false if not
         """
-        filename_split = url.split(".")
-        if filename_split[len(filename_split)-2].endswith("_US"):
-            us_file_type = True
+        if filename != None:
+            filename_split = filename.split(".")
+            if filename_split[len(filename_split)-2].endswith("_US"):
+                us_file_type = True
+            else:
+                us_file_type = False
+    
+            filename_split = filename.split("/")
+            if 'deaths' in filename_split[len(filename_split)-1]:
+                data_types = ['DEATHS']
+            else:
+                data_types = ['CONFIRMED']
+            
+            csv_file_obj = open(filename)
+            reader_obj = csv.reader(csv_file_obj)
+                
         else:
-            us_file_type = False
-
-        filename_split = url.split("/")
-        if 'deaths' in filename_split[len(filename_split)-1]:
-            data_types = ['DEATHS']
-        else:
-            data_types = ['CONFIRMED']
+            filename_split = url.split(".")
+            if filename_split[len(filename_split)-2].endswith("_US"):
+                us_file_type = True
+            else:
+                us_file_type = False
+    
+            filename_split = url.split("/")
+            if 'deaths' in filename_split[len(filename_split)-1]:
+                data_types = ['DEATHS']
+            else:
+                data_types = ['CONFIRMED']
+            
+            response = requests.get(url)
+            lines = response.content.decode("utf-8").splitlines()
+    
+            reader_obj = csv.reader(lines)
         
-        response = requests.get(url)
-        lines = response.content.decode("utf-8").splitlines()
-
-        reader_obj = csv.reader(lines)
         
         header_row_found = False
         row_count = 1
@@ -371,163 +466,257 @@ class Covid19_Data(object):
                         self.__set_node_data_values(country_node, data_types, data_val, index=j, aggregate_to_parent=False, absolute=True)
 
                     i = i + 1
-                        
 
             row_count = row_count + 1
 
-        # csv_file_obj.close()
+        if csv_file_obj:
+            csv_file_obj.close()
+
         return header_row_found
 
-    def read_us_daily_reports_data(self, folder):
+    def read_us_daily_report_file(self, reader_obj, data_index):
+        """Description: Reads the Johns Hopkins COVID-19 daily report CSV file into the time_series_data dictionary
+        Inputs:
+            reader_obj - csv reader object to iterate on for reading each row from the file
+            data_index - array index that the data from this file is to be read into
+        Outputs:
+          self.__time_series_data_tree - nodes updated with data read in from the file
+          return - True if successful, false if not
+        """
+        header_row_found = False
+        row_count = 1
+        for row in reader_obj:
+            if header_row_found == False:
+                header_row_found = self.__map_us_data_locations(row, row_count)
+            elif row[self.__us_data_field_locations["COUNTRY_NAME_COL"]].upper() == "US":
+                # only import data for US (since this is the US daily reports you would expect this to always be true, but 
+                # some of the Johns Hopkins daily report files in the US folder have other countries mixed in
+                country = row[self.__us_data_field_locations["COUNTRY_NAME_COL"]]
+                state = row[self.__us_data_field_locations["STATE_NAME_COL"]]
+
+                # add the country to the base tree if it's not already there
+                country_node = self.time_series_data_tree.get_child_node(country)
+                if country_node == None:
+                    country_node = Covid19_Tree_Node(country)
+                    self.time_series_data_tree.add_child(country_node)
+
+                # add the state to the country tree node if it's not already there
+                state_node = country_node.get_child_node(state)
+                if state_node == None:
+                    state_node = Covid19_Tree_Node(state)
+                    country_node.add_child(state_node)
+                    
+                # add data to the appropriate data array for the state
+                try:
+                    cases = int(row[self.__us_data_field_locations["CONFIRMED_CASES_COL"]])
+                except:
+                    cases = None
+                try:
+                    deaths = int(row[self.__us_data_field_locations["DEATHS_COL"]])
+                except:
+                    deaths = None
+                try:
+                    tested = int(row[self.__us_data_field_locations["PEOPLE_TESTED_COL"]])
+                except:
+                    tested = None
+                try:
+                    rate = float(row[self.__us_data_field_locations["INCIDENT_RATE_COL"]])
+                except:
+                    rate = None
+                try:
+                    active = int(row[self.__us_data_field_locations["ACTIVE_CASES_COL"]])
+                except:
+                    active = None
+                try:
+                    recovered = int(row[self.__us_data_field_locations["RECOVERED_CASES_COL"]])
+                except:
+                    recovered = None
+                try:
+                    hospitalized = int(row[self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"]])
+                except:
+                    hospitalized = None
+                try:
+                    latitude = float(row[self.__us_data_field_locations["LATITUDE_COL"]])
+                except:
+                    latitude = None
+                try:
+                    longitude = float(row[self.__us_data_field_locations["LONGITUDE_COL"]])
+                except:
+                    longitude = None
+
+                if state_node.latitude == None:
+                    state_node.latitude = latitude
+                if state_node.longitude == None:
+                    state_node.longitude = longitude
+
+                # set values that will be aggregated to the parent
+                data_types = ['TESTED', 'ACTIVE', 'RECOVERED', 'HOSPITALIZED']
+                data_values = [tested, active, recovered, hospitalized]
+                self.__set_node_data_values(state_node, data_types, data_values, data_index, aggregate_to_parent=True, absolute=True)
+
+                # set values that will not be aggregated to the parent
+                #todo may want to handle confirmed and deaths as aggregated to parent, but these data values have already been read in from the time series file so I'm skipping them for now
+                data_types = ['CONFIRMED', 'DEATHS', 'INCIDENT']
+                data_values = [cases, deaths, rate]
+                self.__set_node_data_values(state_node, data_types, data_values, data_index, aggregate_to_parent=False, absolute=True)
+
+            row_count = row_count + 1
+        return header_row_found
+
+    def read_world_daily_report_file(self, reader_obj, data_index):
+        """Description: Reads the Johns Hopkins COVID-19 daily report CSV file into the time_series_data dictionary
+        Inputs:
+            reader_obj - csv reader object to iterate on for reading each row from the file
+            data_index - array index that the data from this file is to be read into
+        Outputs:
+          self.__time_series_data_tree - nodes updated with data read in from the file
+          return - True if successful, false if not
+        """
+        header_row_found = False
+        row_count = 1
+        for row in reader_obj:
+            if header_row_found == False:
+                header_row_found = self.__map_world_data_locations(row, row_count)
+            else:
+                country = row[self.__world_data_field_locations["COUNTRY_NAME_COL"]]
+                state = row[self.__world_data_field_locations["STATE_NAME_COL"]]
+                county = row[self.__world_data_field_locations["COUNTY_NAME_COL"]]
+
+                # add the country to the base tree if it's not already there
+                country_node = self.time_series_data_tree.get_child_node(country)
+                if country_node == None:
+                    country_node = Covid19_Tree_Node(country)
+                    self.time_series_data_tree.add_child(country_node)
+                data_node = country_node
+
+                # add the state to the country tree node if it's not already there
+                if state != "":
+                    state_node = country_node.get_child_node(state)
+                    if state_node == None:
+                        state_node = Covid19_Tree_Node(state)
+                        country_node.add_child(state_node)
+                    data_node = state_node
+                        
+                    #add the county to the state if it's not already there
+                    if county != "":
+                        county_node = state_node.get_child_node(county)
+                        if county_node == None:
+                            county_node = Covid19_Tree_Node(county)
+                            state_node.add_child(county_node)
+                        data_node = county_node
+                    else:
+                        county_node = None
+                else:
+                    state_node = None
+                    county_node = None
+
+                # add data to the appropriate data array for the appropriate node
+                try:
+                    cases = int(row[self.__world_data_field_locations["CONFIRMED_CASES_COL"]])
+                except:
+                    cases = None
+                try:
+                    deaths = int(row[self.__world_data_field_locations["DEATHS_COL"]])
+                except:
+                    deaths = None
+                try:
+                    rate = float(row[self.__world_data_field_locations["INCIDENT_RATE_COL"]])
+                except:
+                    rate = None
+                try:
+                    active = int(row[self.__world_data_field_locations["ACTIVE_CASES_COL"]])
+                except:
+                    active = None
+                try:
+                    recovered = int(row[self.__world_data_field_locations["RECOVERED_CASES_COL"]])
+                except:
+                    recovered = None
+                try:
+                    latitude = float(row[self.__world_data_field_locations["LATITUDE_COL"]])
+                except:
+                    latitude = None
+                try:
+                    longitude = float(row[self.__world_data_field_locations["LONGITUDE_COL"]])
+                except:
+                    longitude = None
+
+                if data_node.latitude == None:
+                    data_node.latitude = latitude
+                if data_node.longitude == None:
+                    data_node.longitude = longitude
+
+                # set values that will be aggregated to the parent
+                data_types = ['ACTIVE', 'RECOVERED']
+                data_values = [active, recovered]
+                self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=True, absolute=True)
+
+                # set values that will not be aggregated to the parent
+                #todo may want to handle confirmed and deaths as aggregated to parent, but these data values have already been read in from the time series file so I'm skipping them for now
+                data_types = ['CONFIRMED', 'DEATHS', 'INCIDENT']
+                data_values = [cases, deaths, rate]
+                self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=False, absolute=True)
+
+            row_count = row_count + 1
+        return header_row_found
+        
+    def read_daily_reports_data(self, folder, local, world):
         """Description: Reads the Johns Hopkins COVID-19 daily report CSV file into the time_series_data dictionary
         Inputs:
             folder - string with path of daily report files to be opened
+            local - True if folder is on the local file system, false if folder is on remote github repository
+            world - True if folder contains world daily reports files, False if folder contains US daily reports files
         Outputs:
-          self.__us_data_field_locations - updated dictionary with locations added
+          self.__world_data_field_locations - updated dictionary with locations added
           self.__time_series_data - dictionary containing the time series data that was read in, organized as:
                                     {"CONFIRMED CASES": {state 1, county 1}:cases[],
                                                         {state 1, county 2}:cases[],
                                      ...}
           return - True if successful, false if not
         """
-        # all_files = []
-        # for d in os.listdir(folder):
-        #     bd = os.path.join(folder, d)
-        #     if os.path.isfile(bd):
-        #         all_files.append([bd, d])
-                        
-        for filename in self.github_tree.list_files(folder, extensions=".csv"):
-            file_date_val = datetime.datetime.strptime(self.github_tree.split_file(filename),'%m-%d-%Y')
-            print(filename, " - ", file_date_val)
+        if local:
+            all_files = []
+            for d in os.listdir(folder):
+                bd = os.path.join(folder, d)
+                if os.path.isfile(bd):
+                    all_files.append([bd, d])
             
-            url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/"
-            url += filename.strip("/")
-            response = requests.get(url)
-            lines = response.content.decode("utf-8").splitlines()
-
-            reader_obj = csv.reader(lines)
-            
-            header_row_found = False
-            row_count = 1
-            for row in reader_obj:
-                if header_row_found == False:
-                    if not self.__map_us_data_locations(row, row_count):
-                        return(False)
-                    else:
-                        header_row_found = True
-                elif row[self.__us_data_field_locations["COUNTRY_COL"]].upper() == "US":
-                    # only import data for US (since this is the US daily reports you would expect this to always be true, but 
-                    # some of the Johns Hopkins daily report files in the US folder have other countries mixed in
-                    country = row[self.__us_data_field_locations["COUNTRY_COL"]]
-                    state = row[self.__us_data_field_locations["STATE_NAME_COL"]]
-
-                    # add the country to the base tree if it's not already there
-                    country_node = self.time_series_data_tree.get_child_node(country)
-                    if country_node == None:
-                        country_node = Covid19_Tree_Node(country)
-                        self.time_series_data_tree.add_child(country_node)
-                        country_node.initialize_confirmed_cases(len(self.time_series_dates))
-                        country_node.initialize_deaths(len(self.time_series_dates))
-                        country_node.initialize_people_tested(len(self.time_series_dates))
-                        country_node.initialize_active_cases(len(self.time_series_dates))
-                        country_node.initialize_recovered_cases(len(self.time_series_dates))
-                    else:
-                        #check to make sure all data series for the country have been initialized
-                        if not country_node.confirmed_cases_time_series_data:
-                            country_node.initialize_confirmed_cases(len(self.time_series_dates))
-                        if not country_node.deaths_time_series_data:
-                            country_node.initialize_deaths(len(self.time_series_dates))
-                        if not country_node.people_tested_time_series_data:
-                            country_node.initialize_people_tested(len(self.time_series_dates))
-                        if not country_node.active_cases_time_series_data:
-                            country_node.initialize_active_cases(len(self.time_series_dates))
-                        if not country_node.recovered_cases_time_series_data:
-                            country_node.initialize_recovered_cases(len(self.time_series_dates))
-
-                    # add the state to the country tree node if it's not already there
-                    state_node = country_node.get_child_node(state)
-                    if state_node == None:
-                        state_node = Covid19_Tree_Node(state)
-                        country_node.add_child(state_node)
-                        state_node.initialize_confirmed_cases(len(self.time_series_dates))
-                        state_node.initialize_deaths(len(self.time_series_dates))
-                        state_node.initialize_people_tested(len(self.time_series_dates))
-                        state_node.initialize_incident_rate(len(self.time_series_dates))
-                        state_node.initialize_active_cases(len(self.time_series_dates))
-                        state_node.initialize_recovered_cases(len(self.time_series_dates))
-                    else:
-                        #check to make sure all data series for the state have been initialized
-                        if not state_node.confirmed_cases_time_series_data:
-                            state_node.initialize_confirmed_cases(len(self.time_series_dates))
-                        if not state_node.deaths_time_series_data:
-                            state_node.initialize_deaths(len(self.time_series_dates))
-                        if not state_node.people_tested_time_series_data:
-                            state_node.initialize_people_tested(len(self.time_series_dates))
-                        if not state_node.incident_rate_time_series_data:
-                            state_node.initialize_incident_rate(len(self.time_series_dates))
-                        if not state_node.active_cases_time_series_data:
-                            state_node.initialize_active_cases(len(self.time_series_dates))
-                        if not state_node.recovered_cases_time_series_data:
-                            state_node.initialize_recovered_cases(len(self.time_series_dates))
-                        
-                    # add data to the appropriate data array for the state
+            for filename in all_files:
+                filename_str_partition = filename[1].partition('.')
+                if filename_str_partition[2].upper() == 'CSV':
+                    file_date_val = datetime.datetime.strptime(filename_str_partition[0],'%m-%d-%Y')
+                    print(filename[1], " - ", file_date_val)
+                    
+                    csv_file_obj = open(filename[0])
+                    reader_obj = csv.reader(csv_file_obj)
                     i = self.time_series_dates.index(file_date_val)
-                    try:
-                        cases = int(row[self.__us_data_field_locations["CONFIRMED_CASES_COL"]])
-                    except:
-                        cases = 0
-                    try:
-                        deaths = int(row[self.__us_data_field_locations["DEATHS_COL"]])
-                    except:
-                        deaths = 0
-                    try:
-                        tested = int(row[self.__us_data_field_locations["PEOPLE_TESTED_COL"]])
-                    except:
-                        tested = 0
-                    try:
-                        rate = float(row[self.__us_data_field_locations["INCIDENT_RATE_COL"]])
-                    except:
-                        rate = 0
-                    try:
-                        active = float(row[self.__us_data_field_locations["ACTIVE_CASES_COL"]])
-                    except:
-                        active = 0
-                    try:
-                        recovered = float(row[self.__us_data_field_locations["RECOVERED_CASES_COL"]])
-                    except:
-                        recovered = 0
-
-                    state_node.confirmed_cases_time_series_data[i] = cases
-                    state_node.deaths_time_series_data[i] = deaths
-                    state_node.people_tested_time_series_data[i] = tested
-                    state_node.incident_rate_time_series_data[i] = rate
-                    state_node.active_cases_time_series_data[i] = active
-                    state_node.recovered_cases_time_series_data[i] = recovered
-
-                    # aggregate the state data into the data array for the country
-                    if country_node.confirmed_cases_time_series_data[i] == None:
-                        country_node.confirmed_cases_time_series_data[i] = cases
-                        #todo handle situation where confirmed cases data is already present (overwrite it, skip, etc.)
-                    if country_node.deaths_time_series_data[i] == None:
-                        country_node.deaths_time_series_data[i] = deaths
+                    
+                    if world:
+                        status = self.read_world_daily_report_file(reader_obj, i)
                     else:
-                        country_node.deaths_time_series_data[i] = country_node.deaths_time_series_data[i] + deaths
-                    if country_node.people_tested_time_series_data[i] == None:
-                        country_node.people_tested_time_series_data[i] = tested
-                    else:
-                        country_node.people_tested_time_series_data[i] = country_node.people_tested_time_series_data[i] + tested
-                    if country_node.active_cases_time_series_data[i] == None:
-                        country_node.active_cases_time_series_data[i] = active
-                    else:
-                        country_node.active_cases_time_series_data[i] = country_node.active_cases_time_series_data[i] + active
-                    if country_node.recovered_cases_time_series_data[i] == None:
-                        country_node.recovered_cases_time_series_data[i] = recovered
-                    else:
-                        country_node.recovered_cases_time_series_data[i] = country_node.recovered_cases_time_series_data[i] + recovered
+                        status = self.read_us_daily_report_file(reader_obj, i)
+                    if status == False:
+                        return False
+            csv_file_obj.close()
+        else:
+            for filename in self.github_tree.list_files(folder, extensions=".csv"):
+                file_date_val = datetime.datetime.strptime(self.github_tree.split_file(filename),'%m-%d-%Y')
+                print(filename, " - ", file_date_val)
+                
+                url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/"
+                url += filename.strip("/")
+                response = requests.get(url)
+                lines = response.content.decode("utf-8").splitlines()
+    
+                reader_obj = csv.reader(lines)
+                i = self.time_series_dates.index(file_date_val)
 
-                row_count = row_count + 1
+                if world:
+                    status = self.read_world_daily_report_file(reader_obj, i)
+                else:
+                    status = self.read_us_daily_report_file(reader_obj, i)
+                if status == False:
+                    return False
 
-                 
         return True
        
     def is_date(date):
@@ -639,21 +828,25 @@ class Covid19_Data(object):
           self.__us_data_field_locations - updated dictionary with locations added
           return - True if all locations found, false if not
         """
+
         found_everything = False
         self.__us_data_field_locations["HEADER_ROW"] = -1
-        self.__us_data_field_locations["COUNTRY_COL"] = -1
+        self.__us_data_field_locations["COUNTRY_NAME_COL"] = -1
         self.__us_data_field_locations["STATE_NAME_COL"] = -1
+        self.__us_data_field_locations["LATITUDE_COL"] = -1
+        self.__us_data_field_locations["LONGITUDE_COL"] = -1
         self.__us_data_field_locations["CONFIRMED_CASES_COL"] = -1
         self.__us_data_field_locations["DEATHS_COL"] = -1
         self.__us_data_field_locations["PEOPLE_TESTED_COL"] = -1
         self.__us_data_field_locations["INCIDENT_RATE_COL"] = -1
         self.__us_data_field_locations["ACTIVE_CASES_COL"] = -1
         self.__us_data_field_locations["RECOVERED_CASES_COL"] = -1
+        self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"] = -1
 
         i = 0
         while not found_everything and i < len(row):
             if row[i].upper() == "COUNTRY_REGION":
-                self.__us_data_field_locations["COUNTRY_COL"] = i
+                self.__us_data_field_locations["COUNTRY_NAME_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num                
             elif row[i].upper() == "PROVINCE_STATE":
                 self.__us_data_field_locations["STATE_NAME_COL"] = i
@@ -676,6 +869,15 @@ class Covid19_Data(object):
             elif row[i].upper() == "ACTIVE":
                 self.__us_data_field_locations["ACTIVE_CASES_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "PEOPLE_HOSPITALIZED":
+                self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"] = i
+                self.__us_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LAT":
+                self.__us_data_field_locations["LATITUDE_COL"] = i
+                self.__us_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LONG_":
+                self.__us_data_field_locations["LONGITUDE_COL"] = i
+                self.__us_data_field_locations["HEADER_ROW"] = row_num
 
             i = i + 1
 
@@ -687,6 +889,69 @@ class Covid19_Data(object):
 
         return(found_everything)
 
+    def __map_world_data_locations(self,row, row_num):
+        """Description: Fills in the dictionary of locations with the associated row and column index
+        Inputs:
+            row - the comma separated row list to check for header columns
+            row_num - the current row number
+        Outputs:
+          self.__world_data_field_locations - updated dictionary with locations added
+          return - True if all locations found, false if not
+        """
+
+        found_everything = False
+        # fields marked as -1 are mandatory, -2 are optional
+        self.__world_data_field_locations["HEADER_ROW"] = -1
+        self.__world_data_field_locations["COUNTRY_NAME_COL"] = -1
+        self.__world_data_field_locations["STATE_NAME_COL"] = -1
+        self.__world_data_field_locations["COUNTY_NAME_COL"] = -2
+        self.__world_data_field_locations["LATITUDE_COL"] = -2
+        self.__world_data_field_locations["CONFIRMED_CASES_COL"] = -1
+        self.__world_data_field_locations["LONGITUDE_COL"] = -2
+        self.__world_data_field_locations["DEATHS_COL"] = -1
+        self.__world_data_field_locations["INCIDENT_RATE_COL"] = -2
+        self.__world_data_field_locations["ACTIVE_CASES_COL"] = -2
+        self.__world_data_field_locations["RECOVERED_CASES_COL"] = -1
+
+        for i in range(0,len(row)):
+            if row[i].upper() == "COUNTRY_REGION" or row[i].upper() == "COUNTRY/REGION":
+                self.__world_data_field_locations["COUNTRY_NAME_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "PROVINCE_STATE" or "PROVINCE/STATE" in row[i].upper():
+                self.__world_data_field_locations["STATE_NAME_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "ADMIN2":
+                self.__world_data_field_locations["COUNTY_NAME_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "CONFIRMED":
+                self.__world_data_field_locations["CONFIRMED_CASES_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "DEATHS":
+                self.__world_data_field_locations["DEATHS_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "INCIDENT_RATE":
+                self.__world_data_field_locations["INCIDENT_RATE_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "RECOVERED":
+                self.__world_data_field_locations["RECOVERED_CASES_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "ACTIVE":
+                self.__world_data_field_locations["ACTIVE_CASES_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LAT":
+                self.__world_data_field_locations["LATITUDE_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LONG_":
+                self.__world_data_field_locations["LONGITUDE_COL"] = i
+                self.__world_data_field_locations["HEADER_ROW"] = row_num
+
+        found_everything = True
+        for x in self.__world_data_field_locations:
+            if self.__world_data_field_locations[x] == -1:
+                found_everything = False
+                self.__world_data_field_locations["HEADER_ROW"] = -1
+
+        return(found_everything)
                
     def get_cases(self,state, county):
         """Description: Accessor function to get cases data for a specified state and county
@@ -1334,41 +1599,44 @@ class Covid19_Data(object):
         while gui.mainloop(): pass 
     
 
-    def plot_daily_ratio_cases_to_people_tested_data(self, state_list, county_list, key_list):
+    def plot_daily_ratio_cases_to_people_tested_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs: 
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
+            country_list - list of countries in country / state / county path
+            state_list - optional, list of states in country / state / county path
+            county_list - optional, list of counties in country / state / county path
         Outpus:
             A plot window is opened
         """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-
         start_dates = []
         end_dates = []
         
         x_datasets = []
         y_datasets = []
         labels = []
-        
-        for key_val in key_list:
-            if key_val in self.__time_series_data["PEOPLE TESTED"]:
-                [x, cases] = self.get_daily_new_cases(state=None, county=None, key=key_val)
-                [x, tested] = self.get_daily_new_people_tested(state=None, county=None, key=key_val)
-                ratio = []
-                for i in range(0,len(x)):
-                    if cases[i] == None or tested[i] == None:
-                        ratio.append(None)
-                    elif tested[i] == 0:
-                        ratio.append(None)
-                    else:
-                        ratio.append(cases[i]/tested[i])
+
+
+        for i in range(0, len(country_list)):
+            country_node = self.time_series_data_tree.get_child_node(country_list[i])
+            if (country_node == None):
+                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
+                return(False)
+            state_node = country_node.get_child_node(state_list[i])
+            if (state_node == None):
+                plot_node = country_node
+                label_string = country_list[i] + " - All"
+            else:
+                county_node = state_node.get_child_node(county_list[i])                    
+                if (county_node == None):
+                    plot_node = state_node
+                    label_string = country_list[i] + ", " + state_list[i] + " - All"
+                else:
+                    plot_node = county_node
+                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
+            
+            if plot_node.confirmed_cases_time_series_data and plot_node.people_tested_time_series_data:
+                x = self.time_series_dates
+                ratio = plot_node.get_daily_ratio_confirmed_cases_to_people_tested()
                     
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
@@ -1378,10 +1646,10 @@ class Covid19_Data(object):
                 
                 x_datasets.append(x)
                 y_datasets.append(ratio)
-                labels.append(key_val)
+                labels.append(label_string)
                 
             else:
-                print("invalid state / county pair value: ", key_val)
+                print("invalid country / state / county node value: ", country_list[i], state_list[i], county_list[i])
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))

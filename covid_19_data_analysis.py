@@ -21,11 +21,11 @@ if os.path.isdir('./data'):
     
     data_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + TIME_SERIES_PATH
     us_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + US_DAILY_REPORTS_PATH
-    daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + DAILY_REPORTS_PATH
+    world_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + DAILY_REPORTS_PATH
 else:
     data_folder = '.'
     us_daily_reports_folder = None
-    daily_reports_folder = None
+    world_daily_reports_folder = None
     
 print("Default Data Folder: ", data_folder)
 
@@ -36,7 +36,7 @@ while (choice.upper() != 'Q'):
     print("")
     print("Options")
     print(c + "(R)" + r + "etrieve Johns Hopkins Data")
-    print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports")
+    print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports, Load " + c + "(W)" + r + "orld Daily Reports")
     print("Plot " + c + "(M)" + r + "y Saved Plots")
     print(c + "(Q)" + r + "uit")
     choice = input("What is your choice? ")
@@ -50,16 +50,25 @@ while (choice.upper() != 'Q'):
 
     elif (choice.upper() == 'U'):
         if (us_daily_reports_folder != None):
-            if c19_data.read_us_daily_reports_data(us_daily_reports_folder):
+            if c19_data.read_daily_reports_data(us_daily_reports_folder,local=True,world=False):
                 print("US daily reports files read in successfully")
             else:
                 print("ERROR: US daily report files not read in successfully")
         else:
             print("ERROR: Invalid US daily reports directory, US daily report files not read in successfully")
 
+    elif (choice.upper() == 'W'):
+        if (us_daily_reports_folder != None):
+            if c19_data.read_daily_reports_data(world_daily_reports_folder,local=True,world=True):
+                print("World daily reports files read in successfully")
+            else:
+                print("ERROR: World daily report files not read in successfully")
+        else:
+            print("ERROR: Invalid World daily reports directory, World daily report files not read in successfully")
+        
     elif (choice.upper() == 'L'):
         file_name = covid19_UI.Covid19_UI.choose_file(data_folder)
-        if c19_data.read_time_series_cases_data(file_name):
+        if c19_data.read_time_series_data(filename=file_name, url=None):
             print("Time series data file read in successfully")
         else:
             print("ERROR: time series data file not read in succesfully")
@@ -85,7 +94,7 @@ while (choice.upper() != 'Q'):
         selected_counties.append('Winnebago')
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
-
+        
         selected_countries = []
         selected_states = []
         selected_counties = []
@@ -110,3 +119,30 @@ while (choice.upper() != 'Q'):
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
        
+        selected_countries = []
+        selected_states = []
+        selected_counties = []
+        selected_countries.append("US")
+        selected_states.append('Florida')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Texas')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('California')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Arizona')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('North Carolina')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Georgia')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Wisconsin')
+        selected_counties.append('None')
+        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)
