@@ -229,6 +229,8 @@ class Covid19_Tree_Node(object):
                 fatality_rate.append(deaths/cases)
             except ZeroDivisionError:
                 fatality_rate.append(0)
+            except TypeError:
+                fatality_rate.append(None)
                 
         return fatality_rate
                 
@@ -282,6 +284,20 @@ class Covid19_Data(object):
                 "RECOVERED_CASES_COL": -1
                 }
 
+        # list of countries to ignore data for from the world daily reports (already captured in other data files or is suspect)
+        self.__world_daily_reports_exclusions_list = [
+                "US"
+                ]
+
+        # list of countries or states to Not aggregate data up to the parent in world time series files (these have territories listed separately with the country
+        # as a parent and their values do not add up to the total number for the country)
+        self.__world_country_state_aggregration_exclusions_list = [
+                "United Kingdom",
+                "Netherlands",
+                "France",
+                "Denmark"
+                ]
+        
     def __set_node_data_values(self, node, data_types, data_values, index, aggregate_to_parent, absolute):
         """Description: Sets the specified data values in the data arrays for a tree node at the specified index.
         Inputs:
@@ -472,8 +488,10 @@ class Covid19_Data(object):
                     if county_node != None:
                         self.__set_node_data_values(county_node, data_types, data_val, index=j, aggregate_to_parent=True, absolute=True)
                     elif state_node != None:
-                        self.__set_node_data_values(state_node, data_types, data_val, index=j, aggregate_to_parent=False, absolute=True)
-                        #todo figure out whether we should aggregate state data up to country                        
+                        if country_node.node_name not in self.__world_country_state_aggregration_exclusions_list:
+                            self.__set_node_data_values(state_node, data_types, data_val, index=j, aggregate_to_parent=True, absolute=True)
+                        else:
+                            self.__set_node_data_values(state_node, data_types, data_val, index=j, aggregate_to_parent=False, absolute=True)
                     elif country_node != None:
                         self.__set_node_data_values(country_node, data_types, data_val, index=j, aggregate_to_parent=False, absolute=True)
 
@@ -594,79 +612,80 @@ class Covid19_Data(object):
                 state = row[self.__world_data_field_locations["STATE_NAME_COL"]]
                 county = row[self.__world_data_field_locations["COUNTY_NAME_COL"]]
 
-                # add the country to the base tree if it's not already there
-                country_node = self.time_series_data_tree.get_child_node(country)
-                if country_node == None:
-                    country_node = Covid19_Tree_Node(country)
-                    self.time_series_data_tree.add_child(country_node)
-                data_node = country_node
-
-                # add the state to the country tree node if it's not already there
-                if state != "":
-                    state_node = country_node.get_child_node(state)
-                    if state_node == None:
-                        state_node = Covid19_Tree_Node(state)
-                        country_node.add_child(state_node)
-                    data_node = state_node
-                        
-                    #add the county to the state if it's not already there
-                    if county != "":
-                        county_node = state_node.get_child_node(county)
-                        if county_node == None:
-                            county_node = Covid19_Tree_Node(county)
-                            state_node.add_child(county_node)
-                        data_node = county_node
+                if country not in self.__world_daily_reports_exclusions_list:
+                    # add the country to the base tree if it's not already there
+                    country_node = self.time_series_data_tree.get_child_node(country)
+                    if country_node == None:
+                        country_node = Covid19_Tree_Node(country)
+                        self.time_series_data_tree.add_child(country_node)
+                    data_node = country_node
+    
+                    # add the state to the country tree node if it's not already there
+                    if state != "":
+                        state_node = country_node.get_child_node(state)
+                        if state_node == None:
+                            state_node = Covid19_Tree_Node(state)
+                            country_node.add_child(state_node)
+                        data_node = state_node
+                            
+                        #add the county to the state if it's not already there
+                        if county != "":
+                            county_node = state_node.get_child_node(county)
+                            if county_node == None:
+                                county_node = Covid19_Tree_Node(county)
+                                state_node.add_child(county_node)
+                            data_node = county_node
+                        else:
+                            county_node = None
                     else:
+                        state_node = None
                         county_node = None
-                else:
-                    state_node = None
-                    county_node = None
-
-                # add data to the appropriate data array for the appropriate node
-                try:
-                    cases = int(row[self.__world_data_field_locations["CONFIRMED_CASES_COL"]])
-                except:
-                    cases = None
-                try:
-                    deaths = int(row[self.__world_data_field_locations["DEATHS_COL"]])
-                except:
-                    deaths = None
-                try:
-                    rate = float(row[self.__world_data_field_locations["INCIDENT_RATE_COL"]])
-                except:
-                    rate = None
-                try:
-                    active = int(row[self.__world_data_field_locations["ACTIVE_CASES_COL"]])
-                except:
-                    active = None
-                try:
-                    recovered = int(row[self.__world_data_field_locations["RECOVERED_CASES_COL"]])
-                except:
-                    recovered = None
-                try:
-                    latitude = float(row[self.__world_data_field_locations["LATITUDE_COL"]])
-                except:
-                    latitude = None
-                try:
-                    longitude = float(row[self.__world_data_field_locations["LONGITUDE_COL"]])
-                except:
-                    longitude = None
-
-                if data_node.latitude == None:
-                    data_node.latitude = latitude
-                if data_node.longitude == None:
-                    data_node.longitude = longitude
-
-                # set values that will be aggregated to the parent
-                data_types = ['ACTIVE', 'RECOVERED']
-                data_values = [active, recovered]
-                self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=True, absolute=True)
-
-                # set values that will not be aggregated to the parent
-                #todo may want to handle confirmed and deaths as aggregated to parent, but these data values have already been read in from the time series file so I'm skipping them for now
-                data_types = ['CONFIRMED', 'DEATHS', 'INCIDENT']
-                data_values = [cases, deaths, rate]
-                self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=False, absolute=True)
+    
+                    # add data to the appropriate data array for the appropriate node
+                    try:
+                        cases = int(row[self.__world_data_field_locations["CONFIRMED_CASES_COL"]])
+                    except:
+                        cases = None
+                    try:
+                        deaths = int(row[self.__world_data_field_locations["DEATHS_COL"]])
+                    except:
+                        deaths = None
+                    try:
+                        rate = float(row[self.__world_data_field_locations["INCIDENT_RATE_COL"]])
+                    except:
+                        rate = None
+                    try:
+                        active = int(row[self.__world_data_field_locations["ACTIVE_CASES_COL"]])
+                    except:
+                        active = None
+                    try:
+                        recovered = int(row[self.__world_data_field_locations["RECOVERED_CASES_COL"]])
+                    except:
+                        recovered = None
+                    try:
+                        latitude = float(row[self.__world_data_field_locations["LATITUDE_COL"]])
+                    except:
+                        latitude = None
+                    try:
+                        longitude = float(row[self.__world_data_field_locations["LONGITUDE_COL"]])
+                    except:
+                        longitude = None
+    
+                    if data_node.latitude == None:
+                        data_node.latitude = latitude
+                    if data_node.longitude == None:
+                        data_node.longitude = longitude
+    
+                    # set values that will be aggregated to the parent
+                    data_types = ['ACTIVE', 'RECOVERED']
+                    data_values = [active, recovered]
+                    self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=True, absolute=True)
+    
+                    # set values that will not be aggregated to the parent
+                    #todo may want to handle confirmed and deaths as aggregated to parent, but these data values have already been read in from the time series file so I'm skipping them for now
+                    data_types = ['CONFIRMED', 'DEATHS', 'INCIDENT']
+                    data_values = [cases, deaths, rate]
+                    self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=False, absolute=True)
 
             row_count = row_count + 1
         return header_row_found
