@@ -221,8 +221,20 @@ class Covid19_Tree_Node(object):
                 ratio.append(None)
                 
         return ratio
-
-        
+    
+    def get_case_fatality_rate(self):
+        fatality_rate = []
+        for cases, deaths in zip(self.confirmed_cases_time_series_data, self.deaths_time_series_data):
+            try:
+                fatality_rate.append(deaths/cases)
+            except ZeroDivisionError:
+                fatality_rate.append(0)
+                
+        return fatality_rate
+                
+    
+    
+    
 class Covid19_Data(object):  
     
     def __init__(self):
@@ -343,7 +355,7 @@ class Covid19_Data(object):
             self.__set_node_data_values(node.parent, data_types, data_values, index, aggregate_to_parent, absolute=False)
 
          
-    def read_time_series_data(self, filename, url):
+    def read_time_series_data(self, url, filename=None):
         """Description: Reads the Johns Hopkins COVID-19 time series CSV file into the time_series_data dictionary
         Inputs:
             filename - optional string with name and path of file to be opened
@@ -469,7 +481,7 @@ class Covid19_Data(object):
 
             row_count = row_count + 1
 
-        if csv_file_obj:
+        if filename != None:
             csv_file_obj.close()
 
         return header_row_found
@@ -659,12 +671,12 @@ class Covid19_Data(object):
             row_count = row_count + 1
         return header_row_found
         
-    def read_daily_reports_data(self, folder, local, world):
+    def read_daily_reports_data(self, folder, data_location, on_disk=False):
         """Description: Reads the Johns Hopkins COVID-19 daily report CSV file into the time_series_data dictionary
         Inputs:
             folder - string with path of daily report files to be opened
+            data_location - "world" if world daily reports files, "us" if folder contains US daily reports files
             local - True if folder is on the local file system, false if folder is on remote github repository
-            world - True if folder contains world daily reports files, False if folder contains US daily reports files
         Outputs:
           self.__world_data_field_locations - updated dictionary with locations added
           self.__time_series_data - dictionary containing the time series data that was read in, organized as:
@@ -673,7 +685,7 @@ class Covid19_Data(object):
                                      ...}
           return - True if successful, false if not
         """
-        if local:
+        if on_disk:
             all_files = []
             for d in os.listdir(folder):
                 bd = os.path.join(folder, d)
@@ -690,10 +702,13 @@ class Covid19_Data(object):
                     reader_obj = csv.reader(csv_file_obj)
                     i = self.time_series_dates.index(file_date_val)
                     
-                    if world:
+                    if data_location == "world":
                         status = self.read_world_daily_report_file(reader_obj, i)
-                    else:
+                    elif data_location == "us":
                         status = self.read_us_daily_report_file(reader_obj, i)
+                    else:
+                        raise ValueError(data_location + " is not a valid option")
+                        
                     if status == False:
                         return False
             csv_file_obj.close()
@@ -710,10 +725,13 @@ class Covid19_Data(object):
                 reader_obj = csv.reader(lines)
                 i = self.time_series_dates.index(file_date_val)
 
-                if world:
+                if data_location == "world":
                     status = self.read_world_daily_report_file(reader_obj, i)
-                else:
+                elif data_location == "us":
                     status = self.read_us_daily_report_file(reader_obj, i)
+                else:
+                    raise ValueError(data_location + " is not a valid option")
+                    
                 if status == False:
                     return False
 

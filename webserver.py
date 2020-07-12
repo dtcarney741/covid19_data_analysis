@@ -139,13 +139,14 @@ class GraphSessionInfo:
 
 
 @st.cache(hash_funcs={covid19_data.Covid19_Tree_Node: lambda _: None}, allow_output_mutation=True)
-def parse_data(file_urls, folders):
+def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
     with st.spinner("Parsing Data, Please Wait..."):
         data = covid19_data.Covid19_Data()
-        for file in file_urls:
-            data.read_time_series_cases_data(file)
-        for folder in folders:
-            data.read_us_daily_reports_data(folder)
+        for file_url in file_urls:
+            data.read_time_series_data(file_url)
+
+        data.read_daily_reports_data(us_daily_reports_folder, "us")
+        data.read_daily_reports_data(world_daily_reports_folder, "world")
         
     return data
 
@@ -299,10 +300,9 @@ files = [
     time_series_url + "/time_series_covid19_deaths_global.csv",
     time_series_url + "/time_series_covid19_deaths_US.csv",
     ]
-folders = [
-    "csse_covid_19_data/csse_covid_19_daily_reports_us"
-    ]
-covid_data = copy.deepcopy(parse_data(files, folders))
+us_daily_reports_folder = "csse_covid_19_data/csse_covid_19_daily_reports_us"
+world_daily_reports_folder = "csse_covid_19_data/csse_covid_19_daily_reports"
+covid_data = copy.deepcopy(parse_data(files, us_daily_reports_folder, world_daily_reports_folder))
 world_node = covid_data.time_series_data_tree
 
 
@@ -327,7 +327,9 @@ data_options = {
     "Active Cases":"active_cases_time_series_data",
     "Recovered Cases":"recovered_cases_time_series_data",
     "Recovery Rate":"get_recovery_rate",
-    "Confirmed Cases to People Tested Ratio":"get_ratio_confirmed_cases_to_people_tested"
+    "Confirmed Cases to People Tested Ratio":"get_ratio_confirmed_cases_to_people_tested",
+    "Hospitalizations":"hospitalizations_time_series_data",
+    "Case Fatality Rate":"get_case_fatality_rate"
 }
 
 if st.button("Clear Cache"):
@@ -474,7 +476,7 @@ if mode == "Line Chart":
                         formatted_data.get(derivative_number).get(axis + 1).append(data)
                     except AttributeError:
                         formatted_data.get(derivative_number).update({axis + 1:[data]})
-    
+
     plot_objects = plot_handler.create_multi_axis_plots(formatted_data, add_axis_title_to_legend)            
     for a in user_interaction_areas:
         areas.append(a[0])

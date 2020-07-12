@@ -330,10 +330,10 @@ def create_multi_axis_plots(plot_entries, add_axis_title_to_legend=False):
                     plot.update_layout(
                         yaxis=dict(title=entry.get("y_axis_title"))
                     )
+            if len(dataset) > 1:
+                plot.update_layout(yaxis=dict(title=" and ".join(set(y_axis_titles))))
 
         title = " and ".join(set(y_axis_titles)) + " vs. " + x_axis_title
-        if len(dataset) > 1:
-            plot.update_layout(yaxis=dict(title=" and ".join(set(y_axis_titles))))
             
         plot.update_layout(
             title=title,
