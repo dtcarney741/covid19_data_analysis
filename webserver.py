@@ -140,12 +140,15 @@ class GraphSessionInfo:
 
 @st.cache(hash_funcs={covid19_data.Covid19_Tree_Node: lambda _: None}, allow_output_mutation=True)
 def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
-    with st.spinner("Parsing Data, Please Wait..."):
-        data = covid19_data.Covid19_Data()
-        for file_url in file_urls:
+    data = covid19_data.Covid19_Data()
+    for file_url in file_urls:
+        spinner_text = "Reading time series file: " + file_url
+        with st.spinner(spinner_text):
             data.read_time_series_data(file_url)
 
+    with st.spinner("Reading US daily reports"):
         data.read_daily_reports_data(us_daily_reports_folder, "us")
+    with st.spinner("Reading world daily reports"):
         data.read_daily_reports_data(world_daily_reports_folder, "world")
         
     return data
@@ -297,8 +300,8 @@ time_series_url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
 files = [
     time_series_url + "time_series_covid19_confirmed_US.csv",
     time_series_url + "/time_series_covid19_confirmed_global.csv",
-    time_series_url + "/time_series_covid19_deaths_global.csv",
     time_series_url + "/time_series_covid19_deaths_US.csv",
+    time_series_url + "/time_series_covid19_deaths_global.csv"
     ]
 us_daily_reports_folder = "csse_covid_19_data/csse_covid_19_daily_reports_us"
 world_daily_reports_folder = "csse_covid_19_data/csse_covid_19_daily_reports"
