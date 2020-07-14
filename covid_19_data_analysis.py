@@ -37,7 +37,7 @@ while (choice.upper() != 'Q'):
     print("Options")
     print(c + "(R)" + r + "etrieve Johns Hopkins Data")
     print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports, Load " + c + "(W)" + r + "orld Daily Reports")
-    print("Plot " + c + "(M)" + r + "y Saved Plots")
+    print("Plot " + c + "(M)" + r + "y Saved Plots, Plot User " + c + "(D)" + r + "efined Plot")
     print(c + "(Q)" + r + "uit")
     choice = input("What is your choice? ")
     
@@ -50,7 +50,7 @@ while (choice.upper() != 'Q'):
 
     elif (choice.upper() == 'U'):
         if (us_daily_reports_folder != None):
-            if c19_data.read_daily_reports_data(us_daily_reports_folder,local=True,world=False):
+            if c19_data.read_daily_reports_data(us_daily_reports_folder,data_location="us",on_disk=True):
                 print("US daily reports files read in successfully")
             else:
                 print("ERROR: US daily report files not read in successfully")
@@ -59,7 +59,7 @@ while (choice.upper() != 'Q'):
 
     elif (choice.upper() == 'W'):
         if (us_daily_reports_folder != None):
-            if c19_data.read_daily_reports_data(world_daily_reports_folder,local=True,world=True):
+            if c19_data.read_daily_reports_data(world_daily_reports_folder,data_location="world",on_disk=True):
                 print("World daily reports files read in successfully")
             else:
                 print("ERROR: World daily report files not read in successfully")
@@ -145,4 +145,22 @@ while (choice.upper() != 'Q'):
         selected_counties.append('None')
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)
+    elif (choice.upper() == 'D'):
+        selected_countries = []
+        selected_states = []
+        selected_counties = []
+        selected_countries.append("US")
+        selected_states.append('Wisconsin')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Ohio')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Indiana')
+        selected_counties.append('None')
+        selected_countries.append("US")
+        selected_states.append('Alabama')
+        selected_counties.append('None')
+        c19_data.plot_new_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)
