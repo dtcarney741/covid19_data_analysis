@@ -170,7 +170,8 @@ def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
     with st.spinner("Reading world daily reports"):
         data.read_daily_reports_data(world_daily_reports_folder, "world")
     # covid19_data.dump_tree_to_file(data.time_series_data_tree, "test.txt")
-        
+    with st.spinner("Reading population data"):
+        data.read_population_data("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/UID_ISO_FIPS_LookUp_Table.csv")
     return data
 
              
@@ -424,10 +425,13 @@ data_options = {
     "Daily New Deaths":"get_daily_new_deaths",
     "Testing":"people_tested_time_series_data",
     "Confirmed Cases Incident":"incident_rate_time_series_data",
+    "Confirmed Cases Incident - Calculated":"get_calculated_cases_incident_rate",
+    "Deaths Incident":"get_calculated_deaths_incident_rate",
     "Active Cases":"active_cases_time_series_data",
     "Recovered Cases":"recovered_cases_time_series_data",
     "Recovery Rate":"get_recovery_rate",
     "Confirmed Cases to People Tested Ratio":"get_ratio_confirmed_cases_to_people_tested",
+    "New Confirmed Cases to People Tested Ratio":"get_daily_ratio_confirmed_cases_to_people_tested",
     "Hospitalizations":"hospitalizations_time_series_data",
     "Case Fatality Rate":"get_case_fatality_rate"
 }
