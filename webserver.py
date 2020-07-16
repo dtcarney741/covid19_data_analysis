@@ -140,6 +140,25 @@ class GraphSessionInfo:
 
 @st.cache(hash_funcs={covid19_data.Covid19_Tree_Node: lambda _: None}, allow_output_mutation=True)
 def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
+    """
+    gets data from nodes from select nodes. This is cached so that it doesn't
+    need to be parsed after each rerun
+
+    Parameters
+    ----------
+    file_urls : list
+        list of urls of time series data from John Hopkins repo.
+    us_daily_reports_folder : str
+        folder name of us daily reports data from John Hopkins repo.
+    world_daily_reports_folder : str
+        folder name of world daily reports data from John Hopkins repo..
+
+    Returns
+    -------
+    data : Covid19_Data
+        data that was parsed from files.
+
+    """
     data = covid19_data.Covid19_Data()
     for file_url in file_urls:
         spinner_text = "Reading time series file: " + file_url
@@ -150,20 +169,62 @@ def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
         data.read_daily_reports_data(us_daily_reports_folder, "us")
     with st.spinner("Reading world daily reports"):
         data.read_daily_reports_data(world_daily_reports_folder, "world")
+    # covid19_data.dump_tree_to_file(data.time_series_data_tree, "test.txt")
         
     return data
 
              
 @st.cache(allow_output_mutation=True)
 def get_graph_session_info():
+    """
+    Gets object instance for the graph info class so that data will be saved 
+    between runs
+
+    Returns
+    -------
+    GraphSessionInfo
+        Instance of singleton class.
+
+    """
     return GraphSessionInfo.get_instance()
 
 @st.cache(allow_output_mutation=True)           
 def get_smoothing_options_session_info():
+    """
+    Gets the object instance of the smoothing class so that data will be saved
+    between reruns
+
+    Returns
+    -------
+    SmoothingOptionsInfo
+        Instance of singleton class.
+
+    """
     return SmoothingOptionsInfo.get_instance()
 
             
 def get_configuration(uid, areas, previous={}):
+    """
+    Uses streamlit api to get configuration for smoothing algorithm
+
+    Parameters
+    ----------
+    uid : any
+        a unique id because error will be the same if multiple streamlit boxes have
+        the same text.
+    areas : streamlit object
+        an empty area that a new widget will be placed into.
+    previous : dict, optional
+        dict that contains previous configuration so that things will be updated
+        through streamlit reruns. If not given default values are given.
+        The default is {}.
+
+    Returns
+    -------
+    data : TYPE
+        DESCRIPTION.
+
+    """
     default = int(not(previous.get("smooth", False)))
     # smooth = areas[0].radio("Smooth Graph", ['Yes', 'No'], 1, key=str(uid) + "1")
     radio = areas[0].radio("Smooth Graph", ['Yes', 'No'], default, key=str(uid) + "1")
@@ -196,6 +257,20 @@ def get_configuration(uid, areas, previous={}):
 
 
 def get_label(node):
+    """
+    Creates a label from a node
+
+    Parameters
+    ----------
+    node : Covid19_Tree_Node
+        the node that will be used to get the name of.
+
+    Returns
+    -------
+    string
+        a string of the label for a given node.
+
+    """
     name = node.node_name
     parent = node.parent
     grand_parent = parent.parent
@@ -220,6 +295,21 @@ def get_label(node):
 
 
 def get_regions(root_node):
+    """
+    Gets regions from a tree node using the streamlit api with multiselects
+    Has functionality for adding all data to multiselect
+
+    Parameters
+    ----------
+    root_node : Covid19_Tree_Node
+        the root node of regions.
+
+    Returns
+    -------
+    plotted_areas : list of Covid19_Tree_Node
+        list of the regions that will be plotted.
+
+    """
     # find what areas to graph
     region_default = ["US"]
     if st.sidebar.radio("Add all Regions", ['Yes', 'No'], 1) == "Yes":
@@ -230,31 +320,32 @@ def get_regions(root_node):
     for region in regions_nodes:
         if region.get_children():
             state_province_default = []
-            if st.sidebar.radio("Add all States/Provinces in " + region.node_name, ['Yes', 'No'], 1) == "Yes":
+            if st.sidebar.checkbox("Add Data for " + get_label(region), value=True):
+                plotted_areas.append(region)
+                
+            if st.sidebar.radio("Add all States/Provinces in " + get_label(region), ['Yes', 'No'], 1) == "Yes":
                 state_province_default = [i.node_name for i in region.get_children()]
             sub_regions = st.sidebar.multiselect(
-                    ("State/Province in " + region.node_name), 
+                    ("State/Province in " + get_label(region)), 
                     sorted([i.node_name for i in region.get_children()]),
                     default=state_province_default
                 )
-            if st.sidebar.checkbox("Add Data for " + region.node_name, value=True):
-                plotted_areas.append(region)
         
         
             sub_regions_nodes = [region.get_child_node(name) for name in sorted(sub_regions)]
             for sub_region in sub_regions_nodes:
                 if sub_region.get_children():
                     county_default = []
-                    if st.sidebar.radio("Add all Counties in " + sub_region.node_name, ['Yes', 'No'], 1) == "Yes":
-                        county_default = [i.node_name for i in region.get_children()]
+                    if st.sidebar.radio("Add all Counties in " + get_label(sub_region), ['Yes', 'No'], 1) == "Yes":
+                        county_default = [i.node_name for i in sub_region.get_children()]
                     counties = st.sidebar.multiselect(
-                        ("Counties in " + sub_region.node_name), 
+                        ("Counties in " + get_label(sub_region)), 
                         sorted([i.node_name for i in sub_region.get_children()]),
                         default=county_default
                     )
                     plotted_areas.extend([sub_region.get_child_node(i) for i in counties])
                     
-                    if st.sidebar.checkbox("Add Data for " + sub_region.node_name, value=True):
+                    if st.sidebar.checkbox("Add Data for " + get_label(sub_region), value=True):
                         plotted_areas.append(sub_region)
                 else:
                     plotted_areas.append(sub_region)
@@ -308,7 +399,13 @@ world_daily_reports_folder = "csse_covid_19_data/csse_covid_19_daily_reports"
 covid_data = copy.deepcopy(parse_data(files, us_daily_reports_folder, world_daily_reports_folder))
 world_node = covid_data.time_series_data_tree
 
+# world_node = covid19_data.read_tree_from_file("test.txt")
 
+# covid19_data.dump_tree_to_file(world_node, "before.txt")
+# covid19_data.dump_tree_to_file(tree2, "after.txt")
+
+# covid19_data.print_tree(world_node, "tree1.txt")
+# covid19_data.print_tree(tree2, "tree2.txt")
 
 mode = st.sidebar.selectbox(
     "Mode",

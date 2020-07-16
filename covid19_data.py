@@ -1,12 +1,14 @@
 import csv
 import datetime
+import json
+import multiprocessing as mp
 import os
 import requests
 
 import github_directory_tree
 import matplotlib_gui
 
-class Covid19_Tree_Node(object):
+class Covid19_Tree_Node:
     def __init__(self, name):
         """Description: Initialize a tree node
         Inputs: None
@@ -25,12 +27,12 @@ class Covid19_Tree_Node(object):
         self.latitude = None
         self.longitude = None
         self.parent = None
-        
-    
+
+
     def add_child(self, tree_node):
         """Description: Add a tree node as a child to this tree
         Inputs: tree_node - a reference to an object of type Covid19_Tree_Node
-        Outputs: 
+        Outputs:
             If the tree_node is not already a child of this tree:
                 Adds the node as a child
                 Sets the node's parent value to point to this tree node
@@ -42,8 +44,7 @@ class Covid19_Tree_Node(object):
             self.child_nodes[tree_node.node_name] = tree_node
             tree_node.parent = self
             return True
-        else:
-            return False
+        return False
 
     def get_child_node(self, name):
         """Description: get a reference to a node object for a child node
@@ -52,9 +53,8 @@ class Covid19_Tree_Node(object):
         """
         if name in self.child_nodes:
             return self.child_nodes[name]
-        else:
-            return None
-            
+        return None
+
     def get_children(self):
         """Description: get a list of references to all the children nodes
         Inputs: None
@@ -65,67 +65,67 @@ class Covid19_Tree_Node(object):
             children_list.append(self.child_nodes[child])
         return children_list
 
-    def initialize_confirmed_cases(self,length):
+    def initialize_confirmed_cases(self, length):
         """Description: Initialize the confirmed cases data array
         Inputs: length - number of data values to initailize
         Outputs: self.confirmed_cases_time_series_data[0:length-1] is initialized with None
         """
         self.confirmed_cases_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.confirmed_cases_time_series_data.append(None)
 
-    def initialize_deaths(self,length):
+    def initialize_deaths(self, length):
         """Description: Initialize the deaths data array
         Inputs: length - number of data values to initailize
         Outputs: self.deaths_time_series_data[0:length-1] is initialized with None
         """
         self.deaths_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.deaths_time_series_data.append(None)
 
-    def initialize_people_tested(self,length):
+    def initialize_people_tested(self, length):
         """Description: Initialize the people tested data array
         Inputs: length - number of data values to initailize
         Outputs: self.people_tested_time_series_data[0:length-1] is initialized with None
         """
         self.people_tested_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.people_tested_time_series_data.append(None)
 
-    def initialize_incident_rate(self,length):
+    def initialize_incident_rate(self, length):
         """Description: Initialize the incident rate data array
         Inputs: length - number of data values to initailize
         Outputs: self.incident_rate_time_series_data[0:length-1] is initialized with None
         """
         self.incident_rate_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.incident_rate_time_series_data.append(None)
 
-    def initialize_active_cases(self,length):
+    def initialize_active_cases(self, length):
         """Description: Initialize the active cases data array
         Inputs: length - number of data values to initailize
         Outputs: self.incident_rate_time_series_data[0:length-1] is initialized with None
         """
         self.active_cases_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.active_cases_time_series_data.append(None)
 
-    def initialize_recovered_cases(self,length):
+    def initialize_recovered_cases(self, length):
         """Description: Initialize the recovered cases data array
         Inputs: length - number of data values to initailize
         Outputs: self.incident_rate_time_series_data[0:length-1] is initialized with None
         """
         self.recovered_cases_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.recovered_cases_time_series_data.append(None)
 
-    def initialize_hospitalizations(self,length):
+    def initialize_hospitalizations(self, length):
         """Description: Initialize the recovered cases data array
         Inputs: length - number of data values to initailize
         Outputs: self.hospitalizations_time_series_data[0:length-1] is initialized with None
         """
         self.hospitalizations_time_series_data = []
-        for i in range(0,length):
+        for _ in range(0, length):
             self.hospitalizations_time_series_data.append(None)
 
     def get_daily_new_cases(self):
@@ -136,7 +136,7 @@ class Covid19_Tree_Node(object):
         """
         daily_new_cases = []
         daily_new_cases.append(None)
-        for i in range(1,len(self.confirmed_cases_time_series_data)):
+        for i in range(1, len(self.confirmed_cases_time_series_data)):
             if self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i-1] != None:
                 val = self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
             else:
@@ -152,7 +152,7 @@ class Covid19_Tree_Node(object):
         """
         daily_new_deaths = []
         daily_new_deaths.append(None)
-        for i in range(1,len(self.deaths_time_series_data)):
+        for i in range(1, len(self.deaths_time_series_data)):
             if self.deaths_time_series_data[i] != None and self.deaths_time_series_data[i-1] != None:
                 val = self.deaths_time_series_data[i] - self.deaths_time_series_data[i-1]
             else:
@@ -168,14 +168,14 @@ class Covid19_Tree_Node(object):
         """
         daily_new_people_tested = []
         daily_new_people_tested.append(None)
-        for i in range(1,len(self.people_tested_time_series_data)):
+        for i in range(1, len(self.people_tested_time_series_data)):
             if self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i-1] != None:
                 val = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
             else:
                 val = None
             daily_new_people_tested.append(val)
         return daily_new_people_tested
-    
+
     def get_recovery_rate(self):
         """Description: Calculate and return list of derived data
         Inputs: None
@@ -219,10 +219,19 @@ class Covid19_Tree_Node(object):
                 ratio.append(cases[i]/tested[i])
             else:
                 ratio.append(None)
-                
+
         return ratio
-    
+
     def get_case_fatality_rate(self):
+        """
+        calculates the case fatality rate of a node as deaths divided by confirmed cases
+
+        Returns
+        -------
+        fatality_rate : list
+            list of fatality rates.
+
+        """
         fatality_rate = []
         for cases, deaths in zip(self.confirmed_cases_time_series_data, self.deaths_time_series_data):
             try:
@@ -231,14 +240,14 @@ class Covid19_Tree_Node(object):
                 fatality_rate.append(0)
             except TypeError:
                 fatality_rate.append(None)
-                
+
         return fatality_rate
-                
-    
-    
-    
-class Covid19_Data(object):  
-    
+
+
+
+
+class Covid19_Data:
+
     def __init__(self):
         """Description: Reads a DSM spreadsheet tab into a DSM data structure
         Inputs: None
@@ -297,7 +306,7 @@ class Covid19_Data(object):
                 "France",
                 "Denmark"
                 ]
-        
+
     def __set_node_data_values(self, node, data_types, data_values, index, aggregate_to_parent, absolute):
         """Description: Sets the specified data values in the data arrays for a tree node at the specified index.
         Inputs:
@@ -363,20 +372,20 @@ class Covid19_Data(object):
                     node.hospitalizations_time_series_data[index] = data_values[i]
                 elif data_values[i]:
                     node.hospitalizations_time_series_data[index] = node.hospitalizations_time_series_data[index] + data_values[i]
-                    
+
             i = i + 1
-            
+
         if aggregate_to_parent and node.parent != None:
             # recursive call for the parent node if we're supposed to aggregate.  Recursion ends when we get to the top of the tree since there is no parent.
             self.__set_node_data_values(node.parent, data_types, data_values, index, aggregate_to_parent, absolute=False)
 
-         
+
     def read_time_series_data(self, url, filename=None):
         """Description: Reads the Johns Hopkins COVID-19 time series CSV file into the time_series_data dictionary
         Inputs:
             filename - optional string with name and path of file to be opened
             url - optional string with url name and path of file to be opened from github.
-            
+
             Either filename or ulr should be supplied.  The value in filename if supplied takes prescendence
         Outputs:
           self.__time_series_field_locations - updated dictionary with locations added
@@ -392,35 +401,35 @@ class Covid19_Data(object):
                 us_file_type = True
             else:
                 us_file_type = False
-    
+
             filename_split = filename.split("/")
             if 'deaths' in filename_split[len(filename_split)-1]:
                 data_types = ['DEATHS']
             else:
                 data_types = ['CONFIRMED']
-            
+
             csv_file_obj = open(filename)
             reader_obj = csv.reader(csv_file_obj)
-                
+
         else:
             filename_split = url.split(".")
             if filename_split[len(filename_split)-2].endswith("_US"):
                 us_file_type = True
             else:
                 us_file_type = False
-    
+
             filename_split = url.split("/")
             if 'deaths' in filename_split[len(filename_split)-1]:
                 data_types = ['DEATHS']
             else:
                 data_types = ['CONFIRMED']
-            
+
             response = requests.get(url)
             lines = response.content.decode("utf-8").splitlines()
-    
+
             reader_obj = csv.reader(lines)
-        
-        
+
+
         header_row_found = False
         row_count = 1
         for row in reader_obj:
@@ -445,7 +454,7 @@ class Covid19_Data(object):
                 elif row_count > 10:
                     print("ERROR: read_time_series_cases_data - invalid data file")
                     return False
-                    
+
             else:
                 country = row[self.__time_series_field_locations["COUNTRY_NAME_COL"]]
                 state = row[self.__time_series_field_locations["STATE_NAME_COL"]]
@@ -454,7 +463,7 @@ class Covid19_Data(object):
                 else:
                     # this is a world data time series file so there is no county data
                     county = None
-                    
+
                 # add the country to the base tree if it's not already there
                 country_node = self.time_series_data_tree.get_child_node(country)
                 if country_node == None:
@@ -469,7 +478,7 @@ class Covid19_Data(object):
                         country_node.add_child(state_node)
                 else:
                     state_node = None
-                
+
                 # add the county to the state tree node if it's not already there
                 if county != None and county != "":
                     county_node = state_node.get_child_node(county)
@@ -478,7 +487,7 @@ class Covid19_Data(object):
                         state_node.add_child(county_node)
                 else:
                     county_node = None
-                    
+
                 # add data to the apprpriate entry in the tree for country/state/county and aggregate for whole state, and aggregate for whole country
                 i = 0
                 for col in range(self.__time_series_field_locations["FIRST_DATE_COL"], self.__time_series_field_locations["LAST_DATE_COL"] + 1):
@@ -519,7 +528,7 @@ class Covid19_Data(object):
             if header_row_found == False:
                 header_row_found = self.__map_us_data_locations(row, row_count)
             elif row[self.__us_data_field_locations["COUNTRY_NAME_COL"]].upper() == "US":
-                # only import data for US (since this is the US daily reports you would expect this to always be true, but 
+                # only import data for US (since this is the US daily reports you would expect this to always be true, but
                 # some of the Johns Hopkins daily report files in the US folder have other countries mixed in
                 country = row[self.__us_data_field_locations["COUNTRY_NAME_COL"]]
                 state = row[self.__us_data_field_locations["STATE_NAME_COL"]]
@@ -535,7 +544,7 @@ class Covid19_Data(object):
                 if state_node == None:
                     state_node = Covid19_Tree_Node(state)
                     country_node.add_child(state_node)
-                    
+
                 # add data to the appropriate data array for the state
                 try:
                     cases = int(row[self.__us_data_field_locations["CONFIRMED_CASES_COL"]])
@@ -619,7 +628,7 @@ class Covid19_Data(object):
                         country_node = Covid19_Tree_Node(country)
                         self.time_series_data_tree.add_child(country_node)
                     data_node = country_node
-    
+
                     # add the state to the country tree node if it's not already there
                     if state != "":
                         state_node = country_node.get_child_node(state)
@@ -627,7 +636,7 @@ class Covid19_Data(object):
                             state_node = Covid19_Tree_Node(state)
                             country_node.add_child(state_node)
                         data_node = state_node
-                            
+
                         #add the county to the state if it's not already there
                         if county != "":
                             county_node = state_node.get_child_node(county)
@@ -640,7 +649,7 @@ class Covid19_Data(object):
                     else:
                         state_node = None
                         county_node = None
-    
+
                     # add data to the appropriate data array for the appropriate node
                     try:
                         cases = int(row[self.__world_data_field_locations["CONFIRMED_CASES_COL"]])
@@ -670,17 +679,17 @@ class Covid19_Data(object):
                         longitude = float(row[self.__world_data_field_locations["LONGITUDE_COL"]])
                     except:
                         longitude = None
-    
+
                     if data_node.latitude == None:
                         data_node.latitude = latitude
                     if data_node.longitude == None:
                         data_node.longitude = longitude
-    
+
                     # set values that will be aggregated to the parent
                     data_types = ['ACTIVE', 'RECOVERED']
                     data_values = [active, recovered]
                     self.__set_node_data_values(data_node, data_types, data_values, data_index, aggregate_to_parent=True, absolute=True)
-    
+
                     # set values that will not be aggregated to the parent
                     #todo may want to handle confirmed and deaths as aggregated to parent, but these data values have already been read in from the time series file so I'm skipping them for now
                     data_types = ['CONFIRMED', 'DEATHS', 'INCIDENT']
@@ -689,7 +698,38 @@ class Covid19_Data(object):
 
             row_count = row_count + 1
         return header_row_found
-        
+
+
+    def retrieve_url_data(self, filename):
+        """
+        Function for retrieving data from a url that will be used in parrallel to
+        increase speed of retrieval
+
+        Parameters
+        ----------
+        filename : str
+            a valid file in the github tree.
+
+        Returns
+        -------
+        tuple:
+            lines - what was read from the url response.
+            file_date_val - the date that corresponds with the file
+
+        """
+        file_date_val = datetime.datetime.strptime(self.github_tree.split_file(filename),'%m-%d-%Y')
+        print(" retrieving data for ", filename, " - ", file_date_val)
+
+        url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/"
+        url += filename.strip("/")
+        response = requests.get(url)
+        lines = response.content.decode("utf-8").splitlines()
+
+        # reader_obj = csv.reader(lines)
+
+        return (lines, file_date_val)  # can't return csv_reader object because it is not valid
+
+
     def read_daily_reports_data(self, folder, data_location, on_disk=False):
         """Description: Reads the Johns Hopkins COVID-19 daily report CSV file into the time_series_data dictionary
         Inputs:
@@ -710,37 +750,32 @@ class Covid19_Data(object):
                 bd = os.path.join(folder, d)
                 if os.path.isfile(bd):
                     all_files.append([bd, d])
-            
+
             for filename in all_files:
                 filename_str_partition = filename[1].partition('.')
                 if filename_str_partition[2].upper() == 'CSV':
                     file_date_val = datetime.datetime.strptime(filename_str_partition[0],'%m-%d-%Y')
                     print(filename[1], " - ", file_date_val)
-                    
+
                     csv_file_obj = open(filename[0])
                     reader_obj = csv.reader(csv_file_obj)
                     i = self.time_series_dates.index(file_date_val)
-                    
+
                     if data_location == "world":
                         status = self.read_world_daily_report_file(reader_obj, i)
                     elif data_location == "us":
                         status = self.read_us_daily_report_file(reader_obj, i)
                     else:
                         raise ValueError(data_location + " is not a valid option")
-                        
+
                     if status == False:
                         return False
             csv_file_obj.close()
         else:
-            for filename in self.github_tree.list_files(folder, extensions=".csv"):
-                file_date_val = datetime.datetime.strptime(self.github_tree.split_file(filename),'%m-%d-%Y')
-                print(filename, " - ", file_date_val)
-                
-                url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/"
-                url += filename.strip("/")
-                response = requests.get(url)
-                lines = response.content.decode("utf-8").splitlines()
-    
+            pool = mp.Pool(processes=12)  # retrieve data in parallel because it is very slow otherwise
+            results = pool.map(self.retrieve_url_data, self.github_tree.list_files(folder, extensions=".csv"))
+
+            for lines, file_date_val in results:
                 reader_obj = csv.reader(lines)
                 i = self.time_series_dates.index(file_date_val)
 
@@ -750,13 +785,14 @@ class Covid19_Data(object):
                     status = self.read_us_daily_report_file(reader_obj, i)
                 else:
                     raise ValueError(data_location + " is not a valid option")
-                    
+
                 if status == False:
                     return False
 
         return True
-       
-    def is_date(date):
+
+    @classmethod
+    def is_date(cls, date):
         """Description: Determines whether a string is a valid date in the defined formats
         Inputs:
             date - string value for the date to be evaluated
@@ -768,14 +804,14 @@ class Covid19_Data(object):
 
         for fmt in fmts:
             try:
-                d = datetime.datetime.strptime(date, fmt)
+                _ = datetime.datetime.strptime(date, fmt)
                 return True
             except:
                 pass
-        
+
         return False
-        
-    def __map_time_series_us_locations(self,row, row_num):
+
+    def __map_time_series_us_locations(self, row, row_num):
         """Description: Fills in the dictionary of locations with the associated row and column index
         Inputs:
             row - the comma separated row list to check for header columns
@@ -817,7 +853,7 @@ class Covid19_Data(object):
 
         return(found_everything)
 
-    def __map_time_series_locations(self,row, row_num):
+    def __map_time_series_locations(self, row, row_num):
         """Description: Fills in the dictionary of locations with the associated row and column index
         Inputs:
             row - the comma separated row list to check for header columns
@@ -856,7 +892,7 @@ class Covid19_Data(object):
 
         return(found_everything)
 
-    def __map_us_data_locations(self,row, row_num):
+    def __map_us_data_locations(self, row, row_num):
         """Description: Fills in the dictionary of locations with the associated row and column index
         Inputs:
             row - the comma separated row list to check for header columns
@@ -884,7 +920,7 @@ class Covid19_Data(object):
         while not found_everything and i < len(row):
             if row[i].upper() == "COUNTRY_REGION":
                 self.__us_data_field_locations["COUNTRY_NAME_COL"] = i
-                self.__us_data_field_locations["HEADER_ROW"] = row_num                
+                self.__us_data_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "PROVINCE_STATE":
                 self.__us_data_field_locations["STATE_NAME_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
@@ -926,7 +962,7 @@ class Covid19_Data(object):
 
         return(found_everything)
 
-    def __map_world_data_locations(self,row, row_num):
+    def __map_world_data_locations(self, row, row_num):
         """Description: Fills in the dictionary of locations with the associated row and column index
         Inputs:
             row - the comma separated row list to check for header columns
@@ -989,8 +1025,8 @@ class Covid19_Data(object):
                 self.__world_data_field_locations["HEADER_ROW"] = -1
 
         return(found_everything)
-               
-    def get_cases(self,state, county):
+
+    def get_cases(self, state, county):
         """Description: Accessor function to get cases data for a specified state and county
         Inputs:
             state - the state to retrieve cases data for
@@ -1005,8 +1041,8 @@ class Covid19_Data(object):
             return([dates,cases])
         else:
             return(None)
-  
-    def get_daily_new_cases(self,state, county, key):
+
+    def get_daily_new_cases(self, state, county, key):
         """Description: Accessor function to get new daily cases data for a specified state and county
         Inputs:
             state - optional, the state to retrieve cases data for (ignored if the key value is not None)
@@ -1034,11 +1070,10 @@ class Covid19_Data(object):
                     new_case_val = None
                 new_cases.append(new_case_val)
             return([dates,new_cases])
-        else:
-            return(None)
+        return None
 
 
-    def get_daily_new_deaths(self,state, county, key):
+    def get_daily_new_deaths(self, state, county, key):
         """Description: Accessor function to get new daily deaths data for a specified state and county
         Inputs:
             state - optional, the state to retrieve cases data for (ignored if the key value is not None)
@@ -1066,11 +1101,10 @@ class Covid19_Data(object):
                     new_deaths_val = None
                 new_deaths.append(new_deaths_val)
             return([dates,new_deaths])
-        else:
-            return(None)
+        return None
 
 
-    def get_daily_new_people_tested(self,state, county, key):
+    def get_daily_new_people_tested(self, state, county, key):
         """Description: Accessor function to get new daily people tested data for a specified state and county
         Inputs:
             state - optional, the state to retrieve cases data for (ignored if the key value is not None)
@@ -1098,8 +1132,7 @@ class Covid19_Data(object):
                     new_case_val = None
                 new_cases.append(new_case_val)
             return([dates,new_cases])
-        else:
-            return(None)
+        return None
 
     def get_state_county_cases_keys(self):
         """Description: Accessor function to get all of the state and counties in the time series data dicitionary under confirmed cases
@@ -1161,7 +1194,7 @@ class Covid19_Data(object):
             states.append(values[0])
             counties.append(values[2].lstrip())
         return([states, counties])
- 
+
     def get_incident_rate_keys(self):
         """Description: Accessor function to get all the keys in the time series data dictionary under incidnet rate
         Inputs: None
@@ -1197,29 +1230,29 @@ class Covid19_Data(object):
         for val in self.__time_series_data["PEOPLE TESTED"][key]:
             data.append(val)
         return(data)
-    
-    
-    def create_lookup_tables(self, start_date, end_date):
+
+    @classmethod
+    def create_lookup_tables(cls, start_date, end_date):
         integer_to_dates_table = {}
         dates_to_integer_table = {}
-        
+
         delta = datetime.timedelta(days=1)
         i = 0
         while start_date <= end_date:
             date = start_date.strftime("%m-%d-%Y")
-            # create lookup table for converting to integers for math 
+            # create lookup table for converting to integers for math
             # and back to dates for plotting
             integer_to_dates_table.update({i:date})
             dates_to_integer_table.update({date:i})
-            
+
             start_date += delta  # increase day and integer count by 1
-            i += 1     
-        
+            i += 1
+
         return integer_to_dates_table, dates_to_integer_table
-        
+
     def plot_cases_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             country_list - list of countries in country / state / county path
             state_list - optional, list of states in country / state / county path
             county_list - optional, list of counties in country / state / county path
@@ -1228,7 +1261,7 @@ class Covid19_Data(object):
         """
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
@@ -1243,23 +1276,23 @@ class Covid19_Data(object):
                 plot_node = country_node
                 label_string = country_list[i] + " - All"
             else:
-                county_node = state_node.get_child_node(county_list[i])                    
+                county_node = state_node.get_child_node(county_list[i])
                 if (county_node == None):
                     plot_node = state_node
                     label_string = country_list[i] + ", " + state_list[i] + " - All"
                 else:
                     plot_node = county_node
                     label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-            
+
             if plot_node.confirmed_cases_time_series_data:
                 x = self.time_series_dates
-                
+
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
                 start_dates.append(datemin)
                 end_dates.append(datemax)
                 y = plot_node.confirmed_cases_time_series_data
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(label_string)
@@ -1267,10 +1300,10 @@ class Covid19_Data(object):
             else:
                 print("No confirmed cases data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
                 return(False)
-            
+
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
@@ -1284,10 +1317,10 @@ class Covid19_Data(object):
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
         while gui.mainloop(): pass
 
-        
+
     def plot_deaths_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             country_list - list of countries in country / state / county path
             state_list - optional, list of states in country / state / county path
             county_list - optional, list of counties in country / state / county path
@@ -1296,7 +1329,7 @@ class Covid19_Data(object):
         """
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
@@ -1312,23 +1345,23 @@ class Covid19_Data(object):
                 plot_node = country_node
                 label_string = country_list[i] + " - All"
             else:
-                county_node = state_node.get_child_node(county_list[i])                    
+                county_node = state_node.get_child_node(county_list[i])
                 if (county_node == None):
                     plot_node = state_node
                     label_string = country_list[i] + ", " + state_list[i] + " - All"
                 else:
                     plot_node = county_node
                     label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-            
+
             if plot_node.confirmed_cases_time_series_data:
                 x = self.time_series_dates
-                
+
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
                 start_dates.append(datemin)
                 end_dates.append(datemax)
                 y = plot_node.deaths_time_series_data
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(label_string)
@@ -1338,7 +1371,7 @@ class Covid19_Data(object):
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
@@ -1355,7 +1388,7 @@ class Covid19_Data(object):
 
     def plot_new_cases_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             country_list - list of countries in country / state / county path
             state_list - optional, list of states in country / state / county path
             county_list - optional, list of counties in country / state / county path
@@ -1364,7 +1397,7 @@ class Covid19_Data(object):
         """
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
@@ -1379,25 +1412,25 @@ class Covid19_Data(object):
                 plot_node = country_node
                 label_string = country_list[i] + " - All"
             else:
-                county_node = state_node.get_child_node(county_list[i])                    
+                county_node = state_node.get_child_node(county_list[i])
                 if (county_node == None):
                     plot_node = state_node
                     label_string = country_list[i] + ", " + state_list[i] + " - All"
                 else:
                     plot_node = county_node
                     label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-            
+
             if plot_node.confirmed_cases_time_series_data:
                 x = self.time_series_dates
-                
+
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-                
+
                 start_dates.append(datemin)
                 end_dates.append(datemax)
 
                 y = plot_node.get_daily_new_cases()
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(label_string)
@@ -1407,24 +1440,24 @@ class Covid19_Data(object):
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
-            
+
         gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily New Cases")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass 
+        while gui.mainloop(): pass
 
 
     def plot_new_deaths_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
             county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
             key_list - optional, list of key values ("State, County") to plot data for
@@ -1437,23 +1470,23 @@ class Covid19_Data(object):
             for i in range(0, len(state_list)):
                 key_val = Covid19_Data.create_key(state_list[i], county_list[i])
                 key_list.append(key_val)
-                
+
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
-        
+
         for key_val in key_list:
             if key_val in self.__time_series_data["DEATHS"]:
                 [x, y] = self.get_daily_new_deaths(state=None, county=None, key=key_val)
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-                
+
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(key_val)
@@ -1463,24 +1496,24 @@ class Covid19_Data(object):
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
-            
+
         gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily New Deaths")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass 
+        while gui.mainloop(): pass
 
-        
+
     def plot_incident_rate_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
             county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
             key_list - optional, list of key values ("State, County") to plot data for
@@ -1496,11 +1529,11 @@ class Covid19_Data(object):
 
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
-        
+
 
         for key_val in key_list:
             if key_val in self.__time_series_data["INCIDENT RATE"]:
@@ -1509,36 +1542,36 @@ class Covid19_Data(object):
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
                 y = self.__time_series_data["INCIDENT RATE"][key_val].copy()
-                
+
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(key_val)
             else:
                 print("invalid state / county pair value: ", key_val)
                 return(False)
-            
+
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
-            
+
         gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases per 100000 Population", "Incident Rate")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass 
+        while gui.mainloop(): pass
 
 
     def plot_people_tested_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
             county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
             key_list - optional, list of key values ("State, County") to plot data for
@@ -1554,12 +1587,12 @@ class Covid19_Data(object):
 
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
-        
-        
+
+
         for key_val in key_list:
             if key_val in self.__time_series_data["INCIDENT RATE"]:
                 x = self.__time_series_dates
@@ -1567,10 +1600,10 @@ class Covid19_Data(object):
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
                 y = self.__time_series_data["PEOPLE TESTED"][key_val].copy()
-                
+
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(key_val)
@@ -1579,24 +1612,24 @@ class Covid19_Data(object):
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
-            
+
         gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "People Tested")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass 
-    
+        while gui.mainloop(): pass
+
 
     def plot_new_people_tested_data(self, state_list, county_list, key_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
             county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
             key_list - optional, list of key values ("State, County") to plot data for
@@ -1612,7 +1645,7 @@ class Covid19_Data(object):
 
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
@@ -1625,7 +1658,7 @@ class Covid19_Data(object):
 
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-                
+
                 x_datasets.append(x)
                 y_datasets.append(y)
                 labels.append(key_val)
@@ -1634,24 +1667,24 @@ class Covid19_Data(object):
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
-            
+
         gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Number of People Tested", "Daily New People Tested")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass 
-    
+        while gui.mainloop(): pass
+
 
     def plot_daily_ratio_cases_to_people_tested_data(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
-        Inputs: 
+        Inputs:
             country_list - list of countries in country / state / county path
             state_list - optional, list of states in country / state / county path
             county_list - optional, list of counties in country / state / county path
@@ -1660,7 +1693,7 @@ class Covid19_Data(object):
         """
         start_dates = []
         end_dates = []
-        
+
         x_datasets = []
         y_datasets = []
         labels = []
@@ -1676,43 +1709,164 @@ class Covid19_Data(object):
                 plot_node = country_node
                 label_string = country_list[i] + " - All"
             else:
-                county_node = state_node.get_child_node(county_list[i])                    
+                county_node = state_node.get_child_node(county_list[i])
                 if (county_node == None):
                     plot_node = state_node
                     label_string = country_list[i] + ", " + state_list[i] + " - All"
                 else:
                     plot_node = county_node
                     label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-            
+
             if plot_node.confirmed_cases_time_series_data and plot_node.people_tested_time_series_data:
                 x = self.time_series_dates
                 ratio = plot_node.get_daily_ratio_confirmed_cases_to_people_tested()
-                    
+
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
 
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-                
+
                 x_datasets.append(x)
                 y_datasets.append(ratio)
                 labels.append(label_string)
-                
+
             else:
                 print("invalid country / state / county node value: ", country_list[i], state_list[i], county_list[i])
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-        
+
         integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
         for x_dataset in x_datasets:
             dataset = []
             for x in x_dataset:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
-            
+
         gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Ratio of Confirmed Cases to People Tested", "Percentage of Positive Test Results")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass 
+        while gui.mainloop(): pass
+
+
+def dump_tree_to_file(node, file_location):
+    if node.get_children():
+        for child_node in node.get_children():
+            node_data = {
+                "confirmed_cases":child_node.confirmed_cases_time_series_data,
+                "deaths":child_node.deaths_time_series_data,
+                "people_tested":child_node.people_tested_time_series_data,
+                "incident_rate": child_node.incident_rate_time_series_data,
+                "active_cases":child_node.active_cases_time_series_data,
+                "recovered_cases":child_node.recovered_cases_time_series_data,
+                "population":child_node.population,
+                "hospitalizations":child_node.hospitalizations_time_series_data,
+                "latitude":child_node.latitude,
+                "longitude":child_node.longitude,
+            }
+
+            try:
+                parent_node = child_node.parent.node_name
+            except AttributeError:
+                parent_node = ""
+            data = {
+                "node_name":child_node.node_name,
+                "parent_node":parent_node,
+                "children_nodes":child_node.get_children(),
+                "data":node_data
+            }
+
+            with open(file_location, "a") as f:
+                json.dump(data, f)
+                f.write("\n")
+
+            dump_tree_to_file(child_node, file_location)
+
+        return True
+
+    return False
+
+
+def read_tree_from_file(file_location):
+    root_node = Covid19_Tree_Node("World")
+
+    # contents = []
+    # with open(file_location, "r") as json_file:
+    #     for line in json_file:
+    #         contents.append(json.loads(line))
+    contents = [json.loads(line) for line in open(file_location, 'r')]
+
+    countries = [area for area in contents if area.get("parent_node") == "World"]
+
+    for country in countries:
+        country_node = Covid19_Tree_Node(country.get("node_name"))
+
+        country_node.confirmed_cases_time_series_data = country["data"].get("confirmed_cases")
+        country_node.deaths_time_series_data = country["data"].get("deaths")
+        country_node.people_tested_time_series_data = country["data"].get("people_tested")
+        country_node.incident_rate_time_series_data = country["data"].get("incident_rate")
+        country_node.active_cases_time_series_data = country["data"].get("active_cases")
+        country_node.recovered_cases_time_series_data = country["data"].get("recovered_cases")
+        country_node.population = country["data"].get("population")
+        country_node.hospitalizations_time_series_data = country["data"].get("hospitalizations")
+        country_node.latitude = country["data"].get("latitude")
+        country_node.longitude = country["data"].get("longitude")
+
+
+        if not country.get("node_name") in [i.node_name for i in root_node.get_children()]:
+            root_node.add_child(country_node)
+
+        states = [area for area in contents if area.get("parent_node") == country.get("node_name")]
+
+        for state in states:
+            state_node = Covid19_Tree_Node(state.get("node_name"))
+
+            state_node.confirmed_cases_time_series_data = state["data"].get("confirmed_cases")
+            state_node.deaths_time_series_data = state["data"].get("deaths")
+            state_node.people_tested_time_series_data = state["data"].get("people_tested")
+            state_node.incident_rate_time_series_data = state["data"].get("incident_rate")
+            state_node.active_cases_time_series_data = state["data"].get("active_cases")
+            state_node.recovered_cases_time_series_data = state["data"].get("recovered_cases")
+            state_node.population = state["data"].get("population")
+            state_node.hospitalizations_time_series_data = state["data"].get("hospitalizations")
+            state_node.latitude = state["data"].get("latitude")
+            state_node.longitude = state["data"].get("longitude")
+
+            if not state.get("node_name") in [i.node_name for i in country_node.get_children()]:
+                country_node.add_child(state_node)
+
+            counties = [area for area in contents if area.get("parent_node") == state.get("node_name")]
+
+            for county in counties:
+                county_node = Covid19_Tree_Node(county.get("node_name"))
+
+                county_node.confirmed_cases_time_series_data = county["data"].get("confirmed_cases")
+                county_node.deaths_time_series_data = county["data"].get("deaths")
+                county_node.people_tested_time_series_data = county["data"].get("people_tested")
+                county_node.incident_rate_time_series_data = county["data"].get("incident_rate")
+                county_node.active_cases_time_series_data = county["data"].get("active_cases")
+                county_node.recovered_cases_time_series_data = county["data"].get("recovered_cases")
+                county_node.population = county["data"].get("population")
+                county_node.hospitalizations_time_series_data = county["data"].get("hospitalizations")
+                county_node.latitude = county["data"].get("latitude")
+                county_node.longitude = county["data"].get("longitude")
+
+                if not state.get("node_name") in [i.node_name for i in state_node.get_children()]:
+                    state_node.add_child(county_node)
+
+
+    return root_node
+
+
+def print_tree(node, file, node_level=0):
+    prepend = (node_level * "    ")
+    with open(file, "a") as f:
+        f.write(prepend)
+        f.write(node.node_name)
+        f.write("\n")
+
+    if node.get_children():
+        for child in node.get_children():
+            print_tree(child, file, node_level + 1)
