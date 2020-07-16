@@ -243,7 +243,43 @@ class Covid19_Tree_Node:
 
         return fatality_rate
 
+    def get_calculated_cases_incident_rate(self):
+        """
+        calculates the case incident rate (cases per 100K of population) of a node as confirmed cases / population * 100000
 
+        Returns
+        -------
+        fatality_rate : list
+            list of fatality rates.
+
+        """
+        rate = []
+        for i in range(0, len(self.confirmed_cases_time_series_data)):
+            if self.confirmed_cases_time_series_data[i] and self.population and self.population != 0:
+                value = self.confirmed_cases_time_series_data[i] / self.population * 100000
+                rate.append(value)
+            else:
+                rate.append(None)
+        return rate
+
+    def get_calculated_deaths_incident_rate(self):
+        """
+        calculates the death incident rate (deaths per 100K of population) of a node as deaths / population * 100000
+
+        Returns
+        -------
+        fatality_rate : list
+            list of fatality rates.
+
+        """
+        rate = []
+        for i in range(0, len(self.deaths_time_series_data)):
+            if self.deaths_time_series_data[i] and self.population and self.population != 0:
+                value = self.deaths_time_series_data[i] / self.population * 100000
+                rate.append(value)
+            else:
+                rate.append(None)
+        return rate
 
 
 class Covid19_Data:
@@ -291,6 +327,13 @@ class Covid19_Data:
                 "INCIDENT_RATE_COL": -1,
                 "ACTIVE_CASES_COL": -1,
                 "RECOVERED_CASES_COL": -1
+                }
+        self.__population_field_locations = {
+                "HEADER_ROW": -1,
+                "COUNTRY_NAME_COL": -1,
+                "STATE_NAME_COL": -1,
+                "COUNTY_NAME_COL": -1,
+                "POPULATION_COL": -1
                 }
 
         # list of countries to ignore data for from the world daily reports (already captured in other data files or is suspect)
@@ -700,6 +743,74 @@ class Covid19_Data:
         return header_row_found
 
 
+    def read_population_data(self, url, filename=None):
+        """Description: Reads the Johns Hopkins COVID-19 population CSV file into the data tree nodes
+        Inputs:
+            filename - optional string with name and path of file to be opened
+            url - optional string with url name and path of file to be opened from github.
+
+            Either filename or ulr should be supplied.  The value in filename if supplied takes prescendence
+        Outputs:
+          self.__time_series_field_locations - updated dictionary with locations added
+          self.__time_series_data - dictionary containing the time series data that was read in, organized as:
+                                    {"CONFIRMED CASES": {state 1, county 1}:cases[],
+                                                        {state 1, county 2}:cases[],
+                                     ...}
+          return - True if successful, false if not
+        """
+        if filename != None:
+            csv_file_obj = open(filename)
+            reader_obj = csv.reader(csv_file_obj)
+
+        else:
+            response = requests.get(url)
+            lines = response.content.decode("utf-8").splitlines()
+
+            reader_obj = csv.reader(lines)
+
+
+        header_row_found = False
+        row_count = 1
+        for row in reader_obj:
+            if header_row_found == False:
+                header_row_found = self.__map_population_locations(row, row_count)
+                if not header_row_found and row_count > 10:
+                    print("ERROR: read_time_series_cases_data - invalid data file")
+                    return False
+            else:
+                country = row[self.__population_field_locations["COUNTRY_NAME_COL"]]
+                state = row[self.__population_field_locations["STATE_NAME_COL"]]
+                county = row[self.__population_field_locations["COUNTY_NAME_COL"]]
+                try:
+                    population = int(row[self.__population_field_locations["POPULATION_COL"]])
+                except:
+                    population = None
+
+                country_node = self.time_series_data_tree.get_child_node(country)
+                state_node = None
+                county_node = None
+                if country_node:
+                    if state != "":
+                        state_node = country_node.get_child_node(state)
+                    else:
+                        country_node.population = population
+
+                if state_node:
+                    if county != "":
+                        county_node = state_node.get_child_node(county)
+                    else:
+                        state_node.population = population
+                
+                if county_node:
+                    county_node.population = population
+
+            row_count = row_count + 1
+
+        if filename != None:
+            csv_file_obj.close()
+
+        return True
+    
     def retrieve_url_data(self, filename):
         """
         Function for retrieving data from a url that will be used in parrallel to
@@ -889,6 +1000,46 @@ class Covid19_Data:
                 if x != "COUNTY_NAME_COL" and self.__time_series_field_locations[x] == -1:
                     found_everything = False
                     self.__time_series_field_locations["HEADER_ROW"] = -1
+
+        return(found_everything)
+
+    def __map_population_locations(self, row, row_num):
+        """Description: Fills in the dictionary of locations with the associated row and column index
+        Inputs:
+            row - the comma separated row list to check for header columns
+            row_num - the current row number
+        Outputs:
+          self.__population_field_locations - updated dictionary with locations added
+          return - True if all locations found, false if not
+        """
+        found_everything = False
+        self.__population_field_locations["HEADER_ROW"] = -1
+        self.__population_field_locations["COUNTRY_NAME_COL"] = -1
+        self.__population_field_locations["STATE_NAME_COL"] = -1
+        self.__population_field_locations["COUNTY_NAME_COL"] = -1
+        self.__population_field_locations["POPULATION_COL"] = -1
+
+        i = 0
+        while not found_everything and i < len(row):
+            if row[i].upper() == "COUNTRY_REGION":
+                self.__population_field_locations["COUNTRY_NAME_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "ADMIN2":
+                self.__population_field_locations["COUNTY_NAME_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "PROVINCE_STATE":
+                self.__population_field_locations["STATE_NAME_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "POPULATION":
+                self.__population_field_locations["POPULATION_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            i = i + 1
+
+            found_everything = True
+            for x in self.__population_field_locations:
+                if self.__population_field_locations[x] == -1:
+                    found_everything = False
+                    self.__population_field_locations["HEADER_ROW"] = -1
 
         return(found_everything)
 
@@ -1511,22 +1662,15 @@ class Covid19_Data:
         while gui.mainloop(): pass
 
 
-    def plot_incident_rate_data(self, state_list, county_list, key_list):
+    def plot_cases_incident_rate(self, country_list, state_list, county_list):
         """Description: function to create an XY plot of specified state/county pairs
         Inputs:
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
+            country_list - list of countries in country / state / county path
+            state_list - optional, list of states in country / state / county path
+            county_list - optional, list of counties in country / state / county path
         Outpus:
             A plot window is opened
         """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-
         start_dates = []
         end_dates = []
 
@@ -1534,24 +1678,40 @@ class Covid19_Data:
         y_datasets = []
         labels = []
 
+        for i in range(0, len(country_list)):
+            country_node = self.time_series_data_tree.get_child_node(country_list[i])
+            if (country_node == None):
+                print("ERROR: plot_cases_incident_rate - invalid country: ", country_list[i])
+                return(False)
+            state_node = country_node.get_child_node(state_list[i])
+            if (state_node == None):
+                plot_node = country_node
+                label_string = country_list[i] + " - All"
+            else:
+                county_node = state_node.get_child_node(county_list[i])
+                if (county_node == None):
+                    plot_node = state_node
+                    label_string = country_list[i] + ", " + state_list[i] + " - All"
+                else:
+                    plot_node = county_node
+                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
 
-        for key_val in key_list:
-            if key_val in self.__time_series_data["INCIDENT RATE"]:
-                x = self.__time_series_dates
+            if plot_node.confirmed_cases_time_series_data:
+                x = self.time_series_dates
+
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-
-                y = self.__time_series_data["INCIDENT RATE"][key_val].copy()
-
                 start_dates.append(datemin)
                 end_dates.append(datemax)
-
+                y = plot_node.get_calculated_cases_incident_rate()
                 x_datasets.append(x)
                 y_datasets.append(y)
-                labels.append(key_val)
+                labels.append(label_string)
+
             else:
-                print("invalid state / county pair value: ", key_val)
+                print("No incident rate data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
                 return(False)
+
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
 
@@ -1562,7 +1722,7 @@ class Covid19_Data:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
 
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases per 100000 Population", "Incident Rate")
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases Per 100K Population", "Confirmed Cases Incident Rate")
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)

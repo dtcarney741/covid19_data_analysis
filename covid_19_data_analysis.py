@@ -9,6 +9,7 @@ import data_grabber
 TIME_SERIES_PATH = '/csse_covid_19_data/csse_covid_19_time_series'
 US_DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports_us'
 DAILY_REPORTS_PATH = '/csse_covid_19_data/csse_covid_19_daily_reports'
+POPULATION_PATH = '/csse_covid_19_data/'
 
 choice = ''
 if os.path.isdir('./data'):
@@ -22,10 +23,12 @@ if os.path.isdir('./data'):
     data_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + TIME_SERIES_PATH
     us_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + US_DAILY_REPORTS_PATH
     world_daily_reports_folder = latest_subdir + '/' + os.listdir(latest_subdir)[0] + DAILY_REPORTS_PATH
+    population_file = latest_subdir + '/' + os.listdir(latest_subdir)[0] + POPULATION_PATH + 'UID_ISO_FIPS_LookUp_Table.csv'
 else:
     data_folder = '.'
     us_daily_reports_folder = None
     world_daily_reports_folder = None
+    population_file = None
     
 print("Default Data Folder: ", data_folder)
 
@@ -37,6 +40,7 @@ while (choice.upper() != 'Q'):
     print("Options")
     print(c + "(R)" + r + "etrieve Johns Hopkins Data")
     print(c + "(L)" + r + "oad Time Series Data File, Load " + c + "(U)" + r + "S Daily Reports, Load " + c + "(W)" + r + "orld Daily Reports")
+    print("Load " + c + "(P)" + r + "opulation File")
     print("Plot " + c + "(M)" + r + "y Saved Plots, Plot User " + c + "(D)" + r + "efined Plot")
     print(c + "(Q)" + r + "uit")
     choice = input("What is your choice? ")
@@ -72,6 +76,12 @@ while (choice.upper() != 'Q'):
             print("Time series data file read in successfully")
         else:
             print("ERROR: time series data file not read in succesfully")
+    elif (choice.upper() == 'P'):
+        if c19_data.read_population_data(filename=population_file, url=None):
+            print("Population file read in successfully")
+        else:
+            print("ERROR: population file not read in successfully")
+            
     elif (choice.upper() == "DEBUG1"):
         print("Debug 1 command")
     elif (choice.upper() == "DEBUG2"):
@@ -146,6 +156,7 @@ while (choice.upper() != 'Q'):
         c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
         c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_cases_incident_rate(selected_countries, selected_states, selected_counties)
     elif (choice.upper() == 'D'):
         selected_countries = []
         selected_states = []
