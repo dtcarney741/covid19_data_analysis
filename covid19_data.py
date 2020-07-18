@@ -134,15 +134,18 @@ class Covid19_Tree_Node:
         Outputs: daily_new_cases[] where each element is defined as: self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
                     and daily_new_cases[0] = None
         """
-        daily_new_cases = []
-        daily_new_cases.append(None)
-        for i in range(1, len(self.confirmed_cases_time_series_data)):
-            if self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i-1] != None:
-                val = self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
-            else:
-                val = None
-            daily_new_cases.append(val)
-        return daily_new_cases
+        if self.confirmed_cases_time_series_data:
+            daily_new_cases = []
+            daily_new_cases.append(None)
+            for i in range(1, len(self.confirmed_cases_time_series_data)):
+                if self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i-1] != None:
+                    val = self.confirmed_cases_time_series_data[i] - self.confirmed_cases_time_series_data[i-1]
+                else:
+                    val = None
+                daily_new_cases.append(val)
+            return daily_new_cases
+        else:
+            return None
 
     def get_daily_new_deaths(self):
         """Description: Calculate and return list of derived data
@@ -150,15 +153,18 @@ class Covid19_Tree_Node:
         Outputs: daily_new_deaths[] where each element is defined as: self.deaths_time_series_data[i] - self.deaths_time_series_data[i-1]
                     and daily_new_deaths[0] = None
         """
-        daily_new_deaths = []
-        daily_new_deaths.append(None)
-        for i in range(1, len(self.deaths_time_series_data)):
-            if self.deaths_time_series_data[i] != None and self.deaths_time_series_data[i-1] != None:
-                val = self.deaths_time_series_data[i] - self.deaths_time_series_data[i-1]
-            else:
-                val = None
-            daily_new_deaths.append(val)
-        return daily_new_deaths
+        if self.deaths_time_series_data:
+            daily_new_deaths = []
+            daily_new_deaths.append(None)
+            for i in range(1, len(self.deaths_time_series_data)):
+                if self.deaths_time_series_data[i] != None and self.deaths_time_series_data[i-1] != None:
+                    val = self.deaths_time_series_data[i] - self.deaths_time_series_data[i-1]
+                else:
+                    val = None
+                daily_new_deaths.append(val)
+            return daily_new_deaths
+        else:
+            return None
 
     def get_daily_new_people_tested(self):
         """Description: Calculate and return list of derived data
@@ -166,43 +172,52 @@ class Covid19_Tree_Node:
         Outputs: daily_new_people_tested[] where each element is defined as: self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
                     and daily_new_people_tested[0] = None
         """
-        daily_new_people_tested = []
-        daily_new_people_tested.append(None)
-        for i in range(1, len(self.people_tested_time_series_data)):
-            if self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i-1] != None:
-                val = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
-            else:
-                val = None
-            daily_new_people_tested.append(val)
-        return daily_new_people_tested
+        if self.people_tested_time_series_data:
+            daily_new_people_tested = []
+            daily_new_people_tested.append(None)
+            for i in range(1, len(self.people_tested_time_series_data)):
+                if self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i-1] != None:
+                    val = self.people_tested_time_series_data[i] - self.people_tested_time_series_data[i-1]
+                else:
+                    val = None
+                daily_new_people_tested.append(val)
+            return daily_new_people_tested
+        else:
+            return None
 
     def get_recovery_rate(self):
         """Description: Calculate and return list of derived data
         Inputs: None
         Outputs: recovery_rate[] where each element is defined as: self.recovered_cases_time_series_data[i] / self.confirmed_cases_time_series_data[i]
         """
-        recovery_rate = []
-        for i in range(0, len(self.confirmed_cases_time_series_data)):
-            if self.recovered_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i] != 0:
-                val = self.recovered_cases_time_series_data[i] / self.confirmed_cases_time_series_data[i]
-            else:
-                val = None
-            recovery_rate.append(val)
-        return recovery_rate
+        if self.recovered_cases_time_series_data and self.confirmed_cases_time_series_data:
+            recovery_rate = []
+            for i in range(0, len(self.confirmed_cases_time_series_data)):
+                if self.recovered_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i] != None and self.confirmed_cases_time_series_data[i] != 0:
+                    val = self.recovered_cases_time_series_data[i] / self.confirmed_cases_time_series_data[i]
+                else:
+                    val = None
+                recovery_rate.append(val)
+            return recovery_rate
+        else:
+            return None
 
     def get_ratio_confirmed_cases_to_people_tested(self):
         """Description: Calculate and return list of derived data
         Inputs: None
         Outputs: ratio[] where each element is defined as: self.confirmed_cases_time_series_data[i] / self.people_tested_time_series_data[i]
         """
-        ratio = []
-        for i in range(0, len(self.people_tested_time_series_data)):
-            if self.confirmed_cases_time_series_data[i] != None and self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i] != 0:
-                val = self.confirmed_cases_time_series_data[i] / self.people_tested_time_series_data[i]
-            else:
-                val = None
-            ratio.append(val)
-        return ratio
+        if self.confirmed_cases_time_series_data and self.people_tested_time_series_data:
+            ratio = []
+            for i in range(0, len(self.people_tested_time_series_data)):
+                if self.confirmed_cases_time_series_data[i] != None and self.people_tested_time_series_data[i] != None and self.people_tested_time_series_data[i] != 0:
+                    val = self.confirmed_cases_time_series_data[i] / self.people_tested_time_series_data[i]
+                else:
+                    val = None
+                ratio.append(val)
+            return ratio
+        else:
+            return None
 
     def get_daily_ratio_confirmed_cases_to_people_tested(self):
         """Description: Calculate and return list of derived data
@@ -213,14 +228,17 @@ class Covid19_Tree_Node:
         """
         cases = self.get_daily_new_cases()
         tested = self.get_daily_new_people_tested()
-        ratio = []
-        for i in range(0, len(cases)):
-            if cases[i] and tested[i] and tested[i] != 0:
-                ratio.append(cases[i]/tested[i])
-            else:
-                ratio.append(None)
-
-        return ratio
+        if cases and tested:
+            ratio = []
+            for i in range(0, len(cases)):
+                if cases[i] and tested[i] and tested[i] != 0:
+                    ratio.append(cases[i]/tested[i])
+                else:
+                    ratio.append(None)
+    
+            return ratio
+        else:
+            return None
 
     def get_case_fatality_rate(self):
         """
@@ -232,16 +250,19 @@ class Covid19_Tree_Node:
             list of fatality rates.
 
         """
-        fatality_rate = []
-        for cases, deaths in zip(self.confirmed_cases_time_series_data, self.deaths_time_series_data):
-            try:
-                fatality_rate.append(deaths/cases)
-            except ZeroDivisionError:
-                fatality_rate.append(0)
-            except TypeError:
-                fatality_rate.append(None)
-
-        return fatality_rate
+        if self.confirmed_cases_time_series_data and self.deaths_time_series_data:
+            fatality_rate = []
+            for cases, deaths in zip(self.confirmed_cases_time_series_data, self.deaths_time_series_data):
+                try:
+                    fatality_rate.append(deaths/cases)
+                except ZeroDivisionError:
+                    fatality_rate.append(0)
+                except TypeError:
+                    fatality_rate.append(None)
+    
+            return fatality_rate
+        else:
+            return None
 
     def get_calculated_cases_incident_rate(self):
         """
@@ -253,14 +274,17 @@ class Covid19_Tree_Node:
             list of fatality rates.
 
         """
-        rate = []
-        for i in range(0, len(self.confirmed_cases_time_series_data)):
-            if self.confirmed_cases_time_series_data[i] and self.population and self.population != 0:
-                value = self.confirmed_cases_time_series_data[i] / self.population * 100000
-                rate.append(value)
-            else:
-                rate.append(None)
-        return rate
+        if self.confirmed_cases_time_series_data and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(self.confirmed_cases_time_series_data)):
+                if self.confirmed_cases_time_series_data[i]:
+                    value = self.confirmed_cases_time_series_data[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
 
     def get_calculated_deaths_incident_rate(self):
         """
@@ -272,15 +296,62 @@ class Covid19_Tree_Node:
             list of fatality rates.
 
         """
-        rate = []
-        for i in range(0, len(self.deaths_time_series_data)):
-            if self.deaths_time_series_data[i] and self.population and self.population != 0:
-                value = self.deaths_time_series_data[i] / self.population * 100000
-                rate.append(value)
-            else:
-                rate.append(None)
-        return rate
+        if self.deaths_time_series_data and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(self.deaths_time_series_data)):
+                if self.deaths_time_series_data[i]:
+                    value = self.deaths_time_series_data[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
 
+    def get_calculated_people_tested_incident_rate(self):
+        """
+        calculates the people tested incident rate (tests per 100K of population) of a node as tests / population * 100000
+
+        Returns
+        -------
+        test_rate : list
+            list of test rates.
+
+        """
+        if self.people_tested_time_series_data and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(self.people_tested_time_series_data)):
+                if self.people_tested_time_series_data[i]:
+                    value = self.people_tested_time_series_data[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
+
+    def get_hopsitalizations_incident_rate(self):
+        """
+        calculates the hospitalizations incident rate (hospitalizations per 100K of population) of a node as hospitalizations / population * 100000
+
+        Returns
+        -------
+        test_rate : list
+            list of test rates.
+
+        """
+        if self.hospitalizations_time_series_data and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(self.hospitalizations_time_series_data)):
+                if self.hospitalizations_time_series_data[i]:
+                    value = self.hospitalizations_time_series_data[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
+        
 
 class Covid19_Data:
 
@@ -333,7 +404,9 @@ class Covid19_Data:
                 "COUNTRY_NAME_COL": -1,
                 "STATE_NAME_COL": -1,
                 "COUNTY_NAME_COL": -1,
-                "POPULATION_COL": -1
+                "POPULATION_COL": -1,
+                "LATITUDE_COL": -1,
+                "LONGITUDE_COL": -1
                 }
 
         # list of countries to ignore data for from the world daily reports (already captured in other data files or is suspect)
@@ -617,19 +690,6 @@ class Covid19_Data:
                     hospitalized = int(row[self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"]])
                 except:
                     hospitalized = None
-                try:
-                    latitude = float(row[self.__us_data_field_locations["LATITUDE_COL"]])
-                except:
-                    latitude = None
-                try:
-                    longitude = float(row[self.__us_data_field_locations["LONGITUDE_COL"]])
-                except:
-                    longitude = None
-
-                if state_node.latitude == None:
-                    state_node.latitude = latitude
-                if state_node.longitude == None:
-                    state_node.longitude = longitude
 
                 # set values that will be aggregated to the parent
                 data_types = ['TESTED', 'ACTIVE', 'RECOVERED', 'HOSPITALIZED']
@@ -714,19 +774,6 @@ class Covid19_Data:
                         recovered = int(row[self.__world_data_field_locations["RECOVERED_CASES_COL"]])
                     except:
                         recovered = None
-                    try:
-                        latitude = float(row[self.__world_data_field_locations["LATITUDE_COL"]])
-                    except:
-                        latitude = None
-                    try:
-                        longitude = float(row[self.__world_data_field_locations["LONGITUDE_COL"]])
-                    except:
-                        longitude = None
-
-                    if data_node.latitude == None:
-                        data_node.latitude = latitude
-                    if data_node.longitude == None:
-                        data_node.longitude = longitude
 
                     # set values that will be aggregated to the parent
                     data_types = ['ACTIVE', 'RECOVERED']
@@ -786,6 +833,16 @@ class Covid19_Data:
                 except:
                     population = None
 
+                try:
+                    latitude = float(row[self.__population_field_locations["LATITUDE_COL"]])
+                except:
+                    latitude = None
+                    
+                try:
+                    longitude = float(row[self.__population_field_locations["LONGITUDE_COL"]])
+                except:
+                    longitude = None
+
                 country_node = self.time_series_data_tree.get_child_node(country)
                 state_node = None
                 county_node = None
@@ -794,15 +851,21 @@ class Covid19_Data:
                         state_node = country_node.get_child_node(state)
                     else:
                         country_node.population = population
+                        country_node.latitude = latitude
+                        country_node.longitude = longitude
 
                 if state_node:
                     if county != "":
                         county_node = state_node.get_child_node(county)
                     else:
                         state_node.population = population
+                        state_node.latitude = latitude
+                        state_node.longitude = longitude
                 
                 if county_node:
                     county_node.population = population
+                    county_node.latitude = latitude
+                    county_node.longitude = longitude
 
             row_count = row_count + 1
 
@@ -1018,6 +1081,8 @@ class Covid19_Data:
         self.__population_field_locations["STATE_NAME_COL"] = -1
         self.__population_field_locations["COUNTY_NAME_COL"] = -1
         self.__population_field_locations["POPULATION_COL"] = -1
+        self.__population_field_locations["LATITUDE_COL"] = -1
+        self.__population_field_locations["LONGITUDE_COL"] = -1
 
         i = 0
         while not found_everything and i < len(row):
@@ -1032,6 +1097,12 @@ class Covid19_Data:
                 self.__population_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "POPULATION":
                 self.__population_field_locations["POPULATION_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LAT":
+                self.__population_field_locations["LATITUDE_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "LONG_":
+                self.__population_field_locations["LONGITUDE_COL"] = i
                 self.__population_field_locations["HEADER_ROW"] = row_num
             i = i + 1
 
