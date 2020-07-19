@@ -11,6 +11,8 @@ import numpy as np
 import streamlit as st
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 import covid19_data
 import data_grabber
@@ -412,6 +414,10 @@ mode = st.sidebar.selectbox(
     "Mode",
     [
         "Line Chart",
+        "Area Chart",
+        "Percentage Area Chart",
+        "Pie Chart",
+        "Bar Chart",
         "Parsed Data - Time Series",
         "Parsed Data - Daily Reports",
         "File Data"
@@ -433,7 +439,9 @@ data_options = {
     "Confirmed Cases to People Tested Ratio":"get_ratio_confirmed_cases_to_people_tested",
     "New Confirmed Cases to People Tested Ratio":"get_daily_ratio_confirmed_cases_to_people_tested",
     "Hospitalizations":"hospitalizations_time_series_data",
-    "Case Fatality Rate":"get_case_fatality_rate"
+    "Case Fatality Rate":"get_case_fatality_rate",
+    "Testing Incident":"get_calculated_people_tested_incident_rate",
+    "Hospitalizations Incident":"get_hopsitalizations_incident_rate"
 }
 
 if st.button("Clear Cache"):
@@ -589,7 +597,203 @@ if mode == "Line Chart":
     for area, plt in zip(areas, plot_objects):
         area.plotly_chart(plt, use_container_width=True)
         
+
+
+
+elif mode == "Area Chart":
+    if st.sidebar.checkbox("Select Country"):
+        region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
         
+        selected_node = None
+        print(world_node.get_child_node(region))
+        if st.sidebar.checkbox("Select State/Province"):
+            sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
+            selected_node = world_node.get_child_node(region).get_child_node(sub_region)
+        else:
+            selected_node = world_node.get_child_node(region)
+
+    else:
+        selected_node = world_node
+    
+    
+    data_type = st.sidebar.selectbox("Data Table Entry", sorted(data_options.keys()))
+    
+    columns = {"region":[], "date":[], data_type:[]}
+    for node in selected_node.get_children():
+        print(node)
+        data = getattr(node, data_options.get(data_type))
+        if callable(data):
+            data = data()
+            
+        if data:
+            for i, date in zip(data, dates):
+                columns["region"].append(node.node_name)
+                columns["date"].append(date)
+                columns[data_type].append(i)
+        else:
+            st.warning("No " + data_type + " data was found for " + node.node_name)        
+    
+    df = pd.DataFrame(columns)
+    
+    fig = px.area(df, x="date", y=data_type, color="region", line_group="region")
+    st.plotly_chart(fig, use_container_width=True)  
+    
+    
+    
+    
+elif mode == "Percentage Area Chart":
+    if st.sidebar.checkbox("Select Country"):
+        region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
+        
+        selected_node = None
+        print(world_node.get_child_node(region))
+        if st.sidebar.checkbox("Select State/Province"):
+            sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
+            selected_node = world_node.get_child_node(region).get_child_node(sub_region)
+        else:
+            selected_node = world_node.get_child_node(region)
+
+    else:
+        selected_node = world_node
+    data_type = st.sidebar.selectbox("Data Table Entry", sorted(data_options.keys()))
+    
+    aggregate = [0 for i in range(len(selected_node.get_children()))]
+    for node in selected_node.get_children():
+        data = getattr(node, data_options.get(data_type))
+        if callable(data):
+            data = data()
+        if data:
+            for i in range(len(aggregate)):
+                try:
+                    aggregate[i] += data[i]
+                except TypeError:  # catch if datapoint is None
+                    pass
+        
+    columns = {"region":[], "date":[], data_type:[]}
+    fig = go.Figure()
+    for node in selected_node.get_children():
+        data = getattr(node, data_options.get(data_type))
+        if callable(data):
+            data = data()
+        
+        if data:
+            data_percentage = []
+            for sum_data, node_data in zip(aggregate, data):
+                try:
+                    print(node_data, sum_data)
+                    value = (node_data / sum_data) * 100
+                except:
+                    value = 0
+                data_percentage.append(value)
+            fig.add_trace(go.Scatter(
+                x=dates, 
+                y=data_percentage,
+                mode='lines+markers',
+                stackgroup='one',
+                name=node.node_name,
+                groupnorm='percent' # sets the normalization for the sum of the stackgroup
+            ))
+        else:
+            st.warning("No " + data_type + " data was found for " + node.node_name)        
+
+    st.plotly_chart(fig, use_container_width=True)  
+
+    
+    
+elif mode == "Pie Chart":
+    if st.sidebar.checkbox("Select Country"):
+        region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
+        
+        selected_node = None
+        print(world_node.get_child_node(region))
+        if st.sidebar.checkbox("Select State/Province"):
+            sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
+            selected_node = world_node.get_child_node(region).get_child_node(sub_region)
+        else:
+            selected_node = world_node.get_child_node(region)
+
+    else:
+        selected_node = world_node
+    data_type = st.sidebar.selectbox("Data Type", sorted(data_options.keys()))
+    
+
+    columns = {"region":[], "date":[], data_type:[]}
+    for node in selected_node.get_children():
+        data = getattr(node, data_options.get(data_type))
+        if callable(data):
+            data = data()
+        
+        if data:
+            columns["region"].append(node.node_name)
+            columns["date"].append(dates[-1])
+            columns[data_type].append(data[-1])
+        else:
+            date = dates[-1].strftime("%m/%d/%Y")
+            st.warning("No " + data_type + " data was found for " + node.node_name + " on " + date)        
+    
+    df = pd.DataFrame(columns)
+    date = dates[-1].strftime("%m/%d/%Y")
+    fig = px.pie(df, values=data_type, names="region", title=data_type + " data on " + date)
+    # fig = px.histogram(df, x="date", y=data_type, color="region")
+
+    st.plotly_chart(fig, use_container_width=True)  
+    
+    aggregate = sum([0 if i == None else i for i in columns[data_type]])
+    st.write("Aggregate: ", aggregate)
+
+
+
+        
+elif mode == "Bar Chart":
+    if st.sidebar.checkbox("Select Country"):
+        region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
+        
+        selected_node = None
+        print(world_node.get_child_node(region))
+        if st.sidebar.checkbox("Select State/Province"):
+            sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
+            selected_node = world_node.get_child_node(region).get_child_node(sub_region)
+        else:
+            selected_node = world_node.get_child_node(region)
+
+    else:
+        selected_node = world_node
+    data_types = st.sidebar.multiselect("Data Type", sorted(data_options.keys()))
+
+    fig = go.Figure()
+    aggregates = []
+    for data_type in data_types:
+        regions = []
+        node_data = []
+        for node in selected_node.get_children():
+            data = getattr(node, data_options.get(data_type))
+            if callable(data):
+                data = data()
+            
+            if data:
+                node_data.append(data[-1])
+                regions.append(node.node_name)
+            else:
+                date = dates[-1].strftime("%m/%d/%Y")
+                st.warning("No " + data_type + " data was found for " + node.node_name + " on " + date)        
+        print(node_data)    
+        fig.add_trace(go.Bar(
+            x=regions,
+            y=node_data,
+            name=data_type,
+        ))
+        aggregates.append(sum([0 if i == None else i for i in node_data]))
+
+    if st.checkbox("Stack Bar Graph"):
+        fig.update_layout(barmode='stack')
+
+    st.plotly_chart(fig, use_container_width=True)  
+
+    for data_type, aggregate in zip(data_types, aggregates):
+        st.write(data_type, " Aggregate: ", aggregate)
+
+    
+    
 elif mode == "Parsed Data - Time Series":
     data_type = st.sidebar.selectbox("Data Table Entry", sorted(data_options.keys()))
     plotted_areas = get_regions(world_node)
@@ -609,6 +813,8 @@ elif mode == "Parsed Data - Time Series":
     st.dataframe(df)
 
     
+    
+    
 elif mode == "Parsed Data - Daily Reports":
     plotted_areas = get_regions(world_node)
     
@@ -626,6 +832,9 @@ elif mode == "Parsed Data - Daily Reports":
         df = pd.DataFrame(columns, index=dates)
         st.write("Dataframe for ", get_label(node))
         st.dataframe(df)
+
+
+
 
 elif mode == "File Data":
     # make directories for data to be held if they do not already exist
