@@ -172,3 +172,42 @@ def derivative(x_data, y_data):
     #     dx, dy = smooth_dataset(dx, dy, **kwargs)
     
     return dx, dy
+
+def moving_average(y_data, window_len):
+    """
+    calculates the backward moving average over the specified number of data points for the specified data set
+
+    Parameters
+    ----------
+    y_data : list of data values (int or float)
+    window_len : integer with number of data points to include in moving average ()
+
+    Raises
+    ------
+
+    Returns
+    -------
+    moving_average : list
+        list of moving average values by day (the first window_len values in the list will be None)
+        will return None if something goes wrong
+
+    """
+    if y_data and window_len < len(y_data) and window_len > 0:
+        moving_average_sum = 0
+        moving_average_count = 1
+        moving_average = []
+        for i in range(0, len(y_data)):
+            if y_data[i]:
+                moving_average_sum = moving_average_sum + y_data[i]
+                
+            if moving_average_count == window_len:
+                average_value = moving_average_sum / window_len
+                moving_average.append(average_value)
+                moving_average_sum = moving_average_sum - y_data[i-window_len]
+            else:
+                moving_average.append(None)
+                moving_average_count = moving_average_count + 1
+                
+    else:
+        return None
+    
