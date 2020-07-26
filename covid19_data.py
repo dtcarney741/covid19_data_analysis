@@ -352,6 +352,30 @@ class Covid19_Tree_Node:
         else:
             return None
         
+    def get_daily_new_cases_incident_rate(self):
+        """
+        calculates the daily new cases incident rate (hospitalizations per 100K of population) of a node as daily new cases / population * 100000
+
+        Returns
+        -------
+        new_cases_rate : list
+            list of new cases rates.
+
+        """
+        new_cases = self.get_daily_new_cases()
+        
+        if new_cases and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(new_cases)):
+                if new_cases[i]:
+                    value = new_cases[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
+
 
 class Covid19_Data:
 
@@ -1248,186 +1272,6 @@ class Covid19_Data:
 
         return(found_everything)
 
-    def get_cases(self, state, county):
-        """Description: Accessor function to get cases data for a specified state and county
-        Inputs:
-            state - the state to retrieve cases data for
-            county - the county to retrieve cases data for ("ALL" for aggregate of all counties)
-        Outputs:
-          return - [[date], [cases]] or None of invalid state / county
-        """
-        key = Covid19_Data.create_key(state, county)
-        if key in self.__time_cases_data["CONFIRMED CASES"]:
-            dates = self.__time_series_dates.copy()
-            cases = self.__time_series_data["CONFIRMED CASES"][key].copy()
-            return([dates,cases])
-        else:
-            return(None)
-
-    def get_daily_new_cases(self, state, county, key):
-        """Description: Accessor function to get new daily cases data for a specified state and county
-        Inputs:
-            state - optional, the state to retrieve cases data for (ignored if the key value is not None)
-            county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
-            key - optional, key in form "State, County" to retrieve cases data
-        Outputs:
-          return - [[date], [cases]] or None of invalid state / county
-        """
-        if key == None:
-            key = Covid19_Data.create_key(state, county)
-
-        dates = []
-        new_cases = []
-        if key in self.__time_series_data["CONFIRMED CASES"]:
-            for i in range (1, len(self.__time_series_dates)):
-                dates.append(self.__time_series_dates[i])
-                if self.__time_series_data["CONFIRMED CASES"][key][i] != None:
-                    if self.__time_series_data["CONFIRMED CASES"][key][i-1] != None:
-                        new_case_val = self.__time_series_data["CONFIRMED CASES"][key][i] - self.__time_series_data["CONFIRMED CASES"][key][i-1]
-                    else:
-                        # first day that data appears should be set to 0 in new daily data because otherwise it would be a large jump
-                        # of everything up to that point, not just on that day;  the actual amount on this day is unknown
-                        new_case_val = 0
-                else:
-                    new_case_val = None
-                new_cases.append(new_case_val)
-            return([dates,new_cases])
-        return None
-
-
-    def get_daily_new_deaths(self, state, county, key):
-        """Description: Accessor function to get new daily deaths data for a specified state and county
-        Inputs:
-            state - optional, the state to retrieve cases data for (ignored if the key value is not None)
-            county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
-            key - optional, key in form "State, County" to retrieve cases data
-        Outputs:
-          return - [[date], [cases]] or None of invalid state / county
-        """
-        if key == None:
-            key = Covid19_Data.create_key(state, county)
-
-        dates = []
-        new_deaths = []
-        if key in self.__time_series_data["DEATHS"]:
-            for i in range (1, len(self.__time_series_dates)):
-                dates.append(self.__time_series_dates[i])
-                if self.__time_series_data["DEATHS"][key][i] != None:
-                    if self.__time_series_data["DEATHS"][key][i-1] != None:
-                        # first day that data appears should be set to 0 in new daily data because otherwise it would be a large jump
-                        # of everything up to that point, not just on that day;  the actual amount on this day is unknown
-                        new_deaths_val = self.__time_series_data["DEATHS"][key][i] - self.__time_series_data["DEATHS"][key][i-1]
-                    else:
-                        new_deaths_val = 0
-                else:
-                    new_deaths_val = None
-                new_deaths.append(new_deaths_val)
-            return([dates,new_deaths])
-        return None
-
-
-    def get_daily_new_people_tested(self, state, county, key):
-        """Description: Accessor function to get new daily people tested data for a specified state and county
-        Inputs:
-            state - optional, the state to retrieve cases data for (ignored if the key value is not None)
-            county - optional, the county to retrieve cases data for ("ALL" for aggregate of all counties) (ignored if the key value is not None)
-            key - optional, key in form "State, County" to retrieve people tested data
-        Outputs:
-          return - [[date], [cases]] or None of invalid state / county
-        """
-        if key == None:
-            key = Covid19_Data.create_key(state, county)
-
-        dates = []
-        new_cases = []
-        if key in self.__time_series_data["PEOPLE TESTED"]:
-            for i in range (1, len(self.__time_series_dates)):
-                dates.append(self.__time_series_dates[i])
-                if self.__time_series_data["PEOPLE TESTED"][key][i] != None:
-                    if self.__time_series_data["PEOPLE TESTED"][key][i-1] != None:
-                        new_case_val = self.__time_series_data["PEOPLE TESTED"][key][i] - self.__time_series_data["PEOPLE TESTED"][key][i-1]
-                    else:
-                        # first day that people tested data appears should be set to 0 in new daily tested data because otherwise it would be a large jump
-                        # of all the testing done up to that point, not just on that day;  the actual amount tested on this day is unknown
-                        new_case_val = 0
-                else:
-                    new_case_val = None
-                new_cases.append(new_case_val)
-            return([dates,new_cases])
-        return None
-
-    def get_state_county_cases_keys(self):
-        """Description: Accessor function to get all of the state and counties in the time series data dicitionary under confirmed cases
-        Inputs: None
-        Outputs:
-          return - [[states], [counties]]
-        """
-        states = []
-        counties = []
-        for key in self.__time_series_data["CONFIRMED CASES"]:
-            values = key.partition(",")
-            states.append(values[0])
-            counties.append(values[2].lstrip())
-        return([states, counties])
-
-    def get_cases_keys(self):
-        """Description: Accessor function to get all the keys in the time series data dictionary under confirmed cases
-        Inputs: None
-        Outputs:
-          return - [keys]
-        """
-        keys = []
-        for key in self.__time_series_data["CONFIRMED CASES"]:
-            keys.append(key)
-        return(keys)
-
-    def get_deaths_keys(self):
-        """Description: Accessor function to get all the keys in the time series data dictionary under deaths
-        Inputs: None
-        Outputs:
-          return - [keys]
-        """
-        keys = []
-        for key in self.__time_series_data["DEATHS"]:
-            keys.append(key)
-        return(keys)
-
-    def get_people_tested_keys(self):
-        """Description: Accessor function to get all the keys in the time series data dictionary under people tested
-        Inputs: None
-        Outputs:
-          return - [keys]
-        """
-        keys = []
-        for key in self.__time_series_data["PEOPLE TESTED"]:
-            keys.append(key)
-        return(keys)
-
-    def get_state_county_incident_rate_keys(self):
-        """Description: Accessor function to get all of the state and counties in the time series data dicitionary under incident rate
-        Inputs: None
-        Outputs:
-          return - [[states], [counties]]
-        """
-        states = []
-        counties = []
-        for key in self.__time_series_data["INCIDENT RATE"]:
-            values = key.partition(",")
-            states.append(values[0])
-            counties.append(values[2].lstrip())
-        return([states, counties])
-
-    def get_incident_rate_keys(self):
-        """Description: Accessor function to get all the keys in the time series data dictionary under incidnet rate
-        Inputs: None
-        Outputs:
-          return - [keys]
-        """
-        keys = []
-        for key in self.__time_series_data["INCIDENT RATE"]:
-            keys.append(key)
-        return(keys)
-
     def get_dates(self):
         """Description: Accessor function to get a copy of the list of dates for data points
         Inputs: None
@@ -1438,20 +1282,6 @@ class Covid19_Data:
         for date in self.time_series_dates:
             dates.append(date)
         return(dates)
-
-    def get_people_tested(self,state,county,key):
-        """Description: Accessor function to get list of dates for data points
-        Inputs: None
-        Outputs:
-          return - [dates]
-        """
-        if key == None:
-            key = Covid19_Data.create_key(state,county)
-
-        data = []
-        for val in self.__time_series_data["PEOPLE TESTED"][key]:
-            data.append(val)
-        return(data)
 
     @classmethod
     def create_lookup_tables(cls, start_date, end_date):
@@ -1472,12 +1302,32 @@ class Covid19_Data:
 
         return integer_to_dates_table, dates_to_integer_table
 
-    def plot_cases_data(self, country_list, state_list, county_list):
-        """Description: function to create an XY plot of specified state/county pairs
+    def plot_data(self, country_list, state_list, county_list, plot_type):
+        """Description: function to create an XY plot of specified state/county pairs for the specified plot type
         Inputs:
             country_list - list of countries in country / state / county path
             state_list - optional, list of states in country / state / county path
             county_list - optional, list of counties in country / state / county path
+            plot_type - string identifying the plot type from:
+                "CONFIRMED_CASES"
+                "DEATHS"
+                "PEOPLE_TESTED"
+                "ACTIVE_CASES"
+                "RECOVERED_CASES"
+                "HOSPITALIZATIONS"
+                "DAILY_NEW_CASES"
+                "DAILY_NEW_DEATHS"
+                "DAILY_NEW_PEOPLE_TESTED"
+                "RECOVERY_RATE"
+                "RATIO_CONFIRMED_CASES_TO_PEOPLE_TESTED"
+                "DAILY_RATIO_CONFIRMED_CASES_TO_PEOPLE_TESTED"
+                "CASE_FATALITY_RATE"
+                "CALCULATED_CASES_INCIDENT_RATE"
+                "CALCULATED_DEATHS_INCIDENT_RATE"
+                "CALCULATED_PEOPLE_TESTED_INCIDENT_RATE"
+                "HOSPITALIZATIONS_INCIDENT_RATE"
+                "DAILY_NEW_CASES_INCIDENT_RATE"
+
         Outpus:
             A plot window is opened
         """
@@ -1491,7 +1341,7 @@ class Covid19_Data:
         for i in range(0, len(country_list)):
             country_node = self.time_series_data_tree.get_child_node(country_list[i])
             if (country_node == None):
-                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
+                print("ERROR: plot_data - invalid country: ", country_list[i])
                 return(False)
             state_node = country_node.get_child_node(state_list[i])
             if (state_node == None):
@@ -1506,464 +1356,78 @@ class Covid19_Data:
                     plot_node = county_node
                     label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
 
-            if plot_node.confirmed_cases_time_series_data:
-                x = self.time_series_dates
-
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-                start_dates.append(datemin)
-                end_dates.append(datemax)
+            if plot_type == "CONFIRMED_CASES":
                 y = plot_node.confirmed_cases_time_series_data
-
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(label_string)
-
-            else:
-                print("No confirmed cases data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
-                return(False)
-
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_deaths_data(self, country_list, state_list, county_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            country_list - list of countries in country / state / county path
-            state_list - optional, list of states in country / state / county path
-            county_list - optional, list of counties in country / state / county path
-        Outpus:
-            A plot window is opened
-        """
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-
-        for i in range(0, len(country_list)):
-            country_node = self.time_series_data_tree.get_child_node(country_list[i])
-            if (country_node == None):
-                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
-                return(False)
-            state_node = country_node.get_child_node(state_list[i])
-            if (state_node == None):
-                plot_node = country_node
-                label_string = country_list[i] + " - All"
-            else:
-                county_node = state_node.get_child_node(county_list[i])
-                if (county_node == None):
-                    plot_node = state_node
-                    label_string = country_list[i] + ", " + state_list[i] + " - All"
-                else:
-                    plot_node = county_node
-                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-
-            if plot_node.confirmed_cases_time_series_data:
-                x = self.time_series_dates
-
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-                start_dates.append(datemin)
-                end_dates.append(datemax)
+                plot_label = "Confirmed Cases"
+            elif plot_type == "DEATHS":
                 y = plot_node.deaths_time_series_data
-
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(label_string)
-
-            else:
-                print("No deaths data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
-                return(False)
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Deaths")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_new_cases_data(self, country_list, state_list, county_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            country_list - list of countries in country / state / county path
-            state_list - optional, list of states in country / state / county path
-            county_list - optional, list of counties in country / state / county path
-        Outpus:
-            A plot window is opened
-        """
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-        for i in range(0, len(country_list)):
-            country_node = self.time_series_data_tree.get_child_node(country_list[i])
-            if (country_node == None):
-                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
-                return(False)
-            state_node = country_node.get_child_node(state_list[i])
-            if (state_node == None):
-                plot_node = country_node
-                label_string = country_list[i] + " - All"
-            else:
-                county_node = state_node.get_child_node(county_list[i])
-                if (county_node == None):
-                    plot_node = state_node
-                    label_string = country_list[i] + ", " + state_list[i] + " - All"
-                else:
-                    plot_node = county_node
-                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-
-            if plot_node.confirmed_cases_time_series_data:
-                x = self.time_series_dates
-
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-
-                start_dates.append(datemin)
-                end_dates.append(datemax)
-
+                plot_label = "Deaths"
+            elif plot_type == "PEOPLE_TESTED":
+                y = plot_node.people_tested_time_series_data
+                plot_label = "People Tested"
+            elif plot_type == "ACTIVE_CASES":
+                y = plot_node.active_cases_time_series_data
+                plot_label = "Active Cases"
+            elif plot_type == "RECOVERED_CASES":
+                y = plot_node.recovered_cases_time_series_data
+                plot_label = "Recovered Cases"
+            elif plot_type == "HOSPITALIZATIONS":
+                y = plot_node.hopsitalizations_time_series_data
+                plot_label = "Hospitalizations"
+            elif plot_type == "DAILY_NEW_CASES":
                 y = plot_node.get_daily_new_cases()
-
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(label_string)
-
-            else:
-                print("No cases data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
-                return(False)
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily New Cases")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_new_deaths_data(self, state_list, county_list, key_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
-        Outpus:
-            A plot window is opened
-        """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-        for key_val in key_list:
-            if key_val in self.__time_series_data["DEATHS"]:
-                [x, y] = self.get_daily_new_deaths(state=None, county=None, key=key_val)
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-
-                start_dates.append(datemin)
-                end_dates.append(datemax)
-
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(key_val)
-
-            else:
-                print("invalid state / county pair value: ", key_val)
-                return(False)
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily New Deaths")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_cases_incident_rate(self, country_list, state_list, county_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            country_list - list of countries in country / state / county path
-            state_list - optional, list of states in country / state / county path
-            county_list - optional, list of counties in country / state / county path
-        Outpus:
-            A plot window is opened
-        """
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-        for i in range(0, len(country_list)):
-            country_node = self.time_series_data_tree.get_child_node(country_list[i])
-            if (country_node == None):
-                print("ERROR: plot_cases_incident_rate - invalid country: ", country_list[i])
-                return(False)
-            state_node = country_node.get_child_node(state_list[i])
-            if (state_node == None):
-                plot_node = country_node
-                label_string = country_list[i] + " - All"
-            else:
-                county_node = state_node.get_child_node(county_list[i])
-                if (county_node == None):
-                    plot_node = state_node
-                    label_string = country_list[i] + ", " + state_list[i] + " - All"
-                else:
-                    plot_node = county_node
-                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-
-            if plot_node.confirmed_cases_time_series_data:
-                x = self.time_series_dates
-
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-                start_dates.append(datemin)
-                end_dates.append(datemax)
+                plot_label = "Daily New Cases"
+            elif plot_type == "DAILY_NEW_DEATHS":
+                y = plot_node.get_daily_new_deaths()
+                plot_label = "Daily New Deaths"
+            elif plot_type == "DAILY_NEW_PEOPLE_TESTED":
+                y = plot_node.get_daily_new_people_tested()
+                plot_label = "Daily New People Tested"
+            elif plot_type == "RECOVERY_RATE":
+                y = plot_node.get_recovery_rate()
+                plot_label = "Recovery Rate"
+            elif plot_type == "RATIO_CONFIRMED_CASES_TO_PEOPLE_TESTED":
+                y = plot_node.get_ratio_confirmed_cases_to_people_tested()
+                plot_label = "Ratio of Confirmed Cases to People Tested"
+            elif plot_type == "DAILY_RATIO_CONFIRMED_CASES_TO_PEOPLE_TESTED":
+                y = plot_node.get_daily_ratio_confirmed_cases_to_people_tested()
+                plot_label = "Daily Ratio of Confirmed Cases to People Tested"
+            elif plot_type == "CASE_FATALITY_RATE":
+                y = plot_node.get_case_fatality_rate()
+                plot_lable = "Case Fatality Rate"
+            elif plot_type == "CALCULATED_CASES_INCIDENT_RATE":
                 y = plot_node.get_calculated_cases_incident_rate()
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(label_string)
-
+                plot_label = "Cases per 100K Population"
+            elif plot_type == "CALCULATED_DEATHS_INCIDENT_RATE":
+                y = plot_node.get_calculated_deaths_incident_rate()
+                plot_label = "Deaths per 100K Population"
+            elif plot_type == "CALCULATED_PEOPLE_TESTED_INCIDENT_RATE":
+                y = plot_node.get_calculated_people_tested_incident_rate()
+                plot_label = "People Tested per 100K Population"
+            elif plot_type == "HOSPITALIZATIONS_INCIDENT_RATE":
+                y = plot_node.get_hospitalizations_incident_rate()
+                plot_label = "Hospitalizations per 100K Population"
+            elif plot_type == "DAILY_NEW_CASES_INCIDENT_RATE":
+                y = plot_node.get_daily_new_cases_incident_rate()
+                plot_label = "Daily New Cases per 100K Population"
             else:
-                print("No incident rate data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
-                return(False)
+                print("ERROR: plot_data - invalid plot_type: ", plot_type)
+                return False
 
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Confirmed Cases Per 100K Population", "Confirmed Cases Incident Rate")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_people_tested_data(self, state_list, county_list, key_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
-        Outpus:
-            A plot window is opened
-        """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-
-        for key_val in key_list:
-            if key_val in self.__time_series_data["INCIDENT RATE"]:
-                x = self.__time_series_dates
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-
-                y = self.__time_series_data["PEOPLE TESTED"][key_val].copy()
-
-                start_dates.append(datemin)
-                end_dates.append(datemax)
-
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(key_val)
-            else:
-                print("invalid state / county pair value: ", key_val)
-                return(False)
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "People Tested")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_new_people_tested_data(self, state_list, county_list, key_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            state_list - optional, list of states in state / county pair list (ignored if key_list is not None)
-            county_list - optional, list of counties in state / county pair list (ignored if key_list is not None)
-            key_list - optional, list of key values ("State, County") to plot data for
-        Outpus:
-            A plot window is opened
-        """
-        # create list of keys
-        if key_list == None:
-            key_list = []
-            for i in range(0, len(state_list)):
-                key_val = Covid19_Data.create_key(state_list[i], county_list[i])
-                key_list.append(key_val)
-
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-        for key_val in key_list:
-            if key_val in self.__time_series_data["PEOPLE TESTED"]:
-                [x, y] = self.get_daily_new_people_tested(state=None, county=None, key=key_val)
-                datemin = datetime.date(x[0].year, x[0].month, 1)
-                datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-
-                start_dates.append(datemin)
-                end_dates.append(datemax)
-
-                x_datasets.append(x)
-                y_datasets.append(y)
-                labels.append(key_val)
-            else:
-                print("invalid state / county pair value: ", key_val)
-                return(False)
-
-        integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
-
-        integer_x_datasets = []  # convert dataset x axis from dates to integers using lookup table
-        for x_dataset in x_datasets:
-            dataset = []
-            for x in x_dataset:
-                dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
-            integer_x_datasets.append(dataset)
-
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Number of People Tested", "Daily New People Tested")
-        gui.new_figure(1, 1)
-
-        gui.add_dataset(integer_x_datasets, y_datasets, labels)
-        while gui.mainloop(): pass
-
-
-    def plot_daily_ratio_cases_to_people_tested_data(self, country_list, state_list, county_list):
-        """Description: function to create an XY plot of specified state/county pairs
-        Inputs:
-            country_list - list of countries in country / state / county path
-            state_list - optional, list of states in country / state / county path
-            county_list - optional, list of counties in country / state / county path
-        Outpus:
-            A plot window is opened
-        """
-        start_dates = []
-        end_dates = []
-
-        x_datasets = []
-        y_datasets = []
-        labels = []
-
-
-        for i in range(0, len(country_list)):
-            country_node = self.time_series_data_tree.get_child_node(country_list[i])
-            if (country_node == None):
-                print("ERROR: plot_cases_data - invalid country: ", country_list[i])
-                return(False)
-            state_node = country_node.get_child_node(state_list[i])
-            if (state_node == None):
-                plot_node = country_node
-                label_string = country_list[i] + " - All"
-            else:
-                county_node = state_node.get_child_node(county_list[i])
-                if (county_node == None):
-                    plot_node = state_node
-                    label_string = country_list[i] + ", " + state_list[i] + " - All"
-                else:
-                    plot_node = county_node
-                    label_string = country_list[i] + ", " + state_list[i] + ", " + county_list[i]
-
-            if plot_node.confirmed_cases_time_series_data and plot_node.people_tested_time_series_data:
+            if y:
                 x = self.time_series_dates
-                ratio = plot_node.get_daily_ratio_confirmed_cases_to_people_tested()
-
+                
                 datemin = datetime.date(x[0].year, x[0].month, 1)
                 datemax = datetime.date(x[len(x)-1].year, x[len(x)-1].month + 1, 1)
-
                 start_dates.append(datemin)
                 end_dates.append(datemax)
 
                 x_datasets.append(x)
-                y_datasets.append(ratio)
+                y_datasets.append(y)
                 labels.append(label_string)
 
             else:
-                print("invalid country / state / county node value: ", country_list[i], state_list[i], county_list[i])
+                print("No ", plot_type, " data for country / state / county path: ", country_list[i], state_list[i], county_list[i])
                 return(False)
 
         integer_to_dates_table, dates_to_integer_table = self.create_lookup_tables(min(start_dates), max(end_dates))
@@ -1975,7 +1439,7 @@ class Covid19_Data:
                 dataset.append(dates_to_integer_table.get(x.strftime("%m-%d-%Y")))
             integer_x_datasets.append(dataset)
 
-        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", "Daily Ratio of Confirmed Cases to People Tested", "Percentage of Positive Test Results")
+        gui = matplotlib_gui.MatplotlibGUI(integer_to_dates_table, "Date", plot_label)
         gui.new_figure(1, 1)
 
         gui.add_dataset(integer_x_datasets, y_datasets, labels)

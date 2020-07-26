@@ -102,8 +102,8 @@ while (choice.upper() != 'Q'):
         selected_countries.append("US")
         selected_states.append('Wisconsin')
         selected_counties.append('Winnebago')
-        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
-        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "CONFIRMED_CASES")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DEATHS")
         
         selected_countries = []
         selected_states = []
@@ -126,8 +126,8 @@ while (choice.upper() != 'Q'):
         selected_countries.append("US")
         selected_states.append('Alabama')
         selected_counties.append('Jefferson')
-        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
-        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "CONFIRMED_CASES")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DEATHS")
        
         selected_countries = []
         selected_states = []
@@ -153,10 +153,10 @@ while (choice.upper() != 'Q'):
         selected_countries.append("US")
         selected_states.append('Wisconsin')
         selected_counties.append('None')
-        c19_data.plot_cases_data(selected_countries, selected_states, selected_counties)
-        c19_data.plot_deaths_data(selected_countries, selected_states, selected_counties)
-        c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)
-        c19_data.plot_cases_incident_rate(selected_countries, selected_states, selected_counties)
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "CONFIRMED_CASES")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DEATHS")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DAILY_RATIO_CONFIRMED_CASES_TO_PEOPLE_TESTED")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "CALCULATED_CASES_INCIDENT_RATE")
     elif (choice.upper() == 'D'):
         selected_countries = []
         selected_states = []
@@ -173,5 +173,7 @@ while (choice.upper() != 'Q'):
         selected_countries.append("US")
         selected_states.append('Alabama')
         selected_counties.append('None')
-        c19_data.plot_new_cases_data(selected_countries, selected_states, selected_counties)
-        c19_data.plot_daily_ratio_cases_to_people_tested_data(selected_countries, selected_states, selected_counties)
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DAILY_NEW_CASES")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DAILY_RATIO_CONFIRMED_CASES_TO_PEOPLE_TESTED")
+        c19_data.plot_data(selected_countries, selected_states, selected_counties, "DAILY_NEW_CASES_INCIDENT_RATE")
+        
