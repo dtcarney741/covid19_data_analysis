@@ -433,6 +433,7 @@ data_options = {
     "Confirmed Cases Incident":"incident_rate_time_series_data",
     "Confirmed Cases Incident - Calculated":"get_calculated_cases_incident_rate",
     "Deaths Incident":"get_calculated_deaths_incident_rate",
+    "Daily New Confirmed Cases Incident" : "get_daily_new_cases_incident_rate",
     "Active Cases":"active_cases_time_series_data",
     "Recovered Cases":"recovered_cases_time_series_data",
     "Recovery Rate":"get_recovery_rate",
