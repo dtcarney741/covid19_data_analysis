@@ -26,6 +26,8 @@ class Covid19_Tree_Node:
         self.hospitalizations_time_series_data = []
         self.latitude = None
         self.longitude = None
+        self.iso3 = None
+        self.fips = None
         self.parent = None
 
 
@@ -182,6 +184,25 @@ class Covid19_Tree_Node:
                     val = None
                 daily_new_people_tested.append(val)
             return daily_new_people_tested
+        else:
+            return None
+
+    def get_daily_new_hospitalizations(self):
+        """Description: Calculate and return list of derived data
+        Inputs: None
+        Outputs: daily_new_hospitalizations[] where each element is defined as: self.hospitalizations_time_series_data[i] - self.hospitalizations_time_series_data[i-1]
+                    and daily_new_people_tested[0] = None
+        """
+        if self.hospitalizations_time_series_data:
+            daily_new_hospitalizations = []
+            daily_new_hospitalizations.append(None)
+            for i in range(1, len(self.hospitalizations_time_series_data)):
+                if self.hospitalizations_time_series_data[i] != None and self.hospitalizations_time_series_data[i-1] != None:
+                    val = self.hospitalizations_time_series_data[i] - self.hospitalizations_time_series_data[i-1]
+                else:
+                    val = None
+                daily_new_hospitalizations.append(val)
+            return daily_new_hospitalizations
         else:
             return None
 
@@ -354,7 +375,8 @@ class Covid19_Tree_Node:
         
     def get_daily_new_cases_incident_rate(self):
         """
-        calculates the daily new cases incident rate (hospitalizations per 100K of population) of a node as daily new cases / population * 100000
+        calculates the daily new cases incident rate (new cases per 100K of population) of a node as:
+            daily new cases[i] / population * 100000
 
         Returns
         -------
@@ -369,6 +391,31 @@ class Covid19_Tree_Node:
             for i in range(0, len(new_cases)):
                 if new_cases[i]:
                     value = new_cases[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
+
+    def get_daily_new_hospitalizations_incident_rate(self):
+        """
+        calculates the daily new hospitalizations incident rate (new hospitalizations per 100K of population) of a node as:
+            daily new hospitalizations[i] / population * 100000
+
+        Returns
+        -------
+        new_hospitalizations_rate : list
+            list of new hospitalizations rates.
+
+        """
+        new_hospitalizations = self.get_daily_new_hospitalizations()
+        
+        if new_hospitalizations and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(new_hospitalizations)):
+                if new_hospitalizations[i]:
+                    value = new_hospitalizations[i] / self.population * 100000
                     rate.append(value)
                 else:
                     rate.append(None)
@@ -430,7 +477,9 @@ class Covid19_Data:
                 "COUNTY_NAME_COL": -1,
                 "POPULATION_COL": -1,
                 "LATITUDE_COL": -1,
-                "LONGITUDE_COL": -1
+                "LONGITUDE_COL": -1,
+                "FIPS_COL": -1,
+                "ISO3_COL": -1
                 }
 
         # list of countries to ignore data for from the world daily reports (already captured in other data files or is suspect)
@@ -852,6 +901,12 @@ class Covid19_Data:
                 country = row[self.__population_field_locations["COUNTRY_NAME_COL"]]
                 state = row[self.__population_field_locations["STATE_NAME_COL"]]
                 county = row[self.__population_field_locations["COUNTY_NAME_COL"]]
+                iso3 = row[self.__population_field_locations["ISO3_COL"]]
+                if iso3 == "":
+                    iso3 = None
+                fips = row[self.__population_field_locations["FIPS_COL"]]
+                if fips == "":
+                    fips = None
                 try:
                     population = int(row[self.__population_field_locations["POPULATION_COL"]])
                 except:
@@ -870,27 +925,28 @@ class Covid19_Data:
                 country_node = self.time_series_data_tree.get_child_node(country)
                 state_node = None
                 county_node = None
+                node_to_update = None
+                # TODO - maybe consider replacing this nested IF statement with a tree search for a node with specified country, state, county
                 if country_node:
-                    if state != "":
+                    if state == "":
+                        node_to_update = country_node
+                    else:
                         state_node = country_node.get_child_node(state)
-                    else:
-                        country_node.population = population
-                        country_node.latitude = latitude
-                        country_node.longitude = longitude
+                        if state_node:
+                            if county == "":
+                                node_to_update = state_node
+                            else:
+                                county_node = state_node.get_child_node(county)
+                                if county_node:
+                                    node_to_update = county_node
 
-                if state_node:
-                    if county != "":
-                        county_node = state_node.get_child_node(county)
-                    else:
-                        state_node.population = population
-                        state_node.latitude = latitude
-                        state_node.longitude = longitude
+                if node_to_update:
+                    node_to_update.population = population
+                    node_to_update.latitude = latitude
+                    node_to_update.longitude = longitude
+                    node_to_update.fips = fips
+                    node_to_update.iso3 = iso3
                 
-                if county_node:
-                    county_node.population = population
-                    county_node.latitude = latitude
-                    county_node.longitude = longitude
-
             row_count = row_count + 1
 
         if filename != None:
@@ -1107,6 +1163,9 @@ class Covid19_Data:
         self.__population_field_locations["POPULATION_COL"] = -1
         self.__population_field_locations["LATITUDE_COL"] = -1
         self.__population_field_locations["LONGITUDE_COL"] = -1
+        self.__population_field_locations["FIPS_COL"] = -1
+        self.__population_field_locations["ISO3_COL"] = -1
+        
 
         i = 0
         while not found_everything and i < len(row):
@@ -1127,6 +1186,12 @@ class Covid19_Data:
                 self.__population_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "LONG_":
                 self.__population_field_locations["LONGITUDE_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "FIPS":
+                self.__population_field_locations["FIPS_COL"] = i
+                self.__population_field_locations["HEADER_ROW"] = row_num
+            elif row[i].upper() == "ISO3":
+                self.__population_field_locations["ISO3_COL"] = i
                 self.__population_field_locations["HEADER_ROW"] = row_num
             i = i + 1
 
