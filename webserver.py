@@ -7,12 +7,16 @@ Created on Mon Jun 15 22:06:37 2020
 """
 import copy
 import datetime
+import json
 import numpy as np
 import streamlit as st
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import pycountry_convert as pc
+from urllib.request import urlopen
+import us
 
 import covid19_data
 import data_grabber
@@ -318,6 +322,7 @@ def get_regions(root_node):
     if st.sidebar.radio("Add all Regions", ['Yes', 'No'], 1) == "Yes":
         region_default = [i.node_name for i in root_node.get_children()]
     regions = st.sidebar.multiselect("Select Regions", sorted([i.node_name for i in root_node.get_children()]), default=region_default)
+
     regions_nodes = [root_node.get_child_node(name) for name in regions]
     plotted_areas = []
     for region in regions_nodes:
@@ -325,7 +330,8 @@ def get_regions(root_node):
             state_province_default = []
             if st.sidebar.checkbox("Add Data for " + get_label(region), value=True):
                 plotted_areas.append(region)
-                
+            st.sidebar.markdown("---")
+            
             if st.sidebar.radio("Add all States/Provinces in " + get_label(region), ['Yes', 'No'], 1) == "Yes":
                 state_province_default = [i.node_name for i in region.get_children()]
             sub_regions = st.sidebar.multiselect(
@@ -333,6 +339,7 @@ def get_regions(root_node):
                     sorted([i.node_name for i in region.get_children()]),
                     default=state_province_default
                 )
+            st.sidebar.markdown("---")
         
         
             sub_regions_nodes = [region.get_child_node(name) for name in sorted(sub_regions)]
@@ -350,6 +357,7 @@ def get_regions(root_node):
                     
                     if st.sidebar.checkbox("Add Data for " + get_label(sub_region), value=True):
                         plotted_areas.append(sub_region)
+                    st.sidebar.markdown("---")
                 else:
                     plotted_areas.append(sub_region)
         else:
@@ -418,6 +426,7 @@ mode = st.sidebar.selectbox(
         "Percentage Area Chart",
         "Pie Chart",
         "Bar Chart",
+        "Map",
         "Parsed Data - Time Series",
         "Parsed Data - Daily Reports",
         "File Data"
@@ -458,6 +467,8 @@ int_to_dates_lookup, dates_to_int_lookup = covid_data.create_lookup_tables(min(d
 if mode == "Line Chart":
     graph_types1 = st.sidebar.multiselect("Axis 1", sorted(data_options.keys()), default=["Confirmed Cases"])
     graph_types2 = st.sidebar.multiselect("Axis 2", sorted(data_options.keys()))
+    
+    st.sidebar.markdown("---")
     
     plotted_areas = get_regions(world_node)
 
@@ -595,7 +606,6 @@ if mode == "Line Chart":
     plot_objects = plot_handler.create_multi_axis_plots(formatted_data, add_axis_title_to_legend)            
     for a in user_interaction_areas:
         areas.append(a[0])
-    # print(len(areas), len(plot_objects), plots_data[0][0].num_plots, get_graph_session_info().num_derivatives)
        
     for area, plt in zip(areas, plot_objects):
         area.plotly_chart(plt, use_container_width=True)
@@ -608,7 +618,6 @@ elif mode == "Area Chart":
         region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
         
         selected_node = None
-        print(world_node.get_child_node(region))
         if st.sidebar.checkbox("Select State/Province"):
             sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
             selected_node = world_node.get_child_node(region).get_child_node(sub_region)
@@ -623,7 +632,6 @@ elif mode == "Area Chart":
     
     columns = {"region":[], "date":[], data_type:[]}
     for node in selected_node.get_children():
-        print(node)
         data = getattr(node, data_options.get(data_type))
         if callable(data):
             data = data()
@@ -649,7 +657,6 @@ elif mode == "Percentage Area Chart":
         region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
         
         selected_node = None
-        print(world_node.get_child_node(region))
         if st.sidebar.checkbox("Select State/Province"):
             sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
             selected_node = world_node.get_child_node(region).get_child_node(sub_region)
@@ -671,6 +678,8 @@ elif mode == "Percentage Area Chart":
                     aggregate[i] += data[i]
                 except TypeError:  # catch if datapoint is None
                     pass
+                except IndexError:
+                    pass
         
     columns = {"region":[], "date":[], data_type:[]}
     fig = go.Figure()
@@ -683,7 +692,6 @@ elif mode == "Percentage Area Chart":
             data_percentage = []
             for sum_data, node_data in zip(aggregate, data):
                 try:
-                    print(node_data, sum_data)
                     value = (node_data / sum_data) * 100
                 except:
                     value = 0
@@ -708,7 +716,6 @@ elif mode == "Pie Chart":
         region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
         
         selected_node = None
-        print(world_node.get_child_node(region))
         if st.sidebar.checkbox("Select State/Province"):
             sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
             selected_node = world_node.get_child_node(region).get_child_node(sub_region)
@@ -752,7 +759,6 @@ elif mode == "Bar Chart":
         region = st.sidebar.selectbox("Region", sorted([i.node_name for i in world_node.get_children() if i.get_children()]))    
         
         selected_node = None
-        print(world_node.get_child_node(region))
         if st.sidebar.checkbox("Select State/Province"):
             sub_region = st.sidebar.selectbox("State/Province", sorted([i.node_name for i in world_node.get_child_node(region).get_children() if i.get_children()]))
             selected_node = world_node.get_child_node(region).get_child_node(sub_region)
@@ -779,7 +785,6 @@ elif mode == "Bar Chart":
             else:
                 date = dates[-1].strftime("%m/%d/%Y")
                 st.warning("No " + data_type + " data was found for " + node.node_name + " on " + date)        
-        print(node_data)    
         fig.add_trace(go.Bar(
             x=regions,
             y=node_data,
@@ -796,6 +801,236 @@ elif mode == "Bar Chart":
         st.write(data_type, " Aggregate: ", aggregate)
 
     
+elif mode == "Map":
+    map_type = st.sidebar.selectbox("Map Mode", ["US Counties", "US States", "US State", "European Countries", "World"])
+    data_type = st.sidebar.selectbox("Color Mode", sorted(data_options.keys()))
+    map_color_scale = "turbid"
+    
+    if map_type == "US Counties":
+        with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
+            counties_fips = json.load(response)
+        states = [i for i in  world_node.get_child_node("US").get_children()]
+        counties = []
+        for state in states:
+            counties.extend(state.get_children())
+        data = {}
+        zero_data = []
+        j = 0
+        for i, county in enumerate(counties):
+            if county.fips and county.fips in [i.get("id") for i in list(counties_fips.values())[1]]:
+                node_data = getattr(county, data_options.get(data_type))
+                if callable(node_data):
+                    node_data = node_data()
+                if node_data:
+                    d = {
+                        "fips":county.fips,
+                        "data":node_data[-1] if node_data[-1] is not None else 0,
+                        "county":county.node_name + ", " + county.parent.node_name
+                        
+                    }
+                    data.update({j:d})
+                    j += 1
+                    if node_data[-1] == 0 or (node_data and node_data[-1] is None):
+                        zero_data.append(county.node_name + ", " + county.parent.node_name)
+                    
+        df = pd.DataFrame.from_dict(data, orient='index')
+        if not df.empty:
+            fig = px.choropleth(
+                df, 
+                geojson=counties_fips, 
+                locations='fips', 
+                color='data',
+                color_continuous_scale=map_color_scale,
+                scope="usa",
+                labels={'data':data_type},
+                hover_name="county"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type)
+            for i in zero_data:
+                st.markdown("* " + i)
+        else:
+            st.warning("No data for counties available with selected data type")
+
+    elif map_type == "US States":
+        states = [i for i in  world_node.get_child_node("US").get_children()]
+
+        data = {}
+        zero_data = []
+        j = 0
+        for i, state in enumerate(states):
+            node_data = getattr(state, data_options.get(data_type))
+            if callable(node_data):
+                node_data = node_data()
+            if node_data and us.states.lookup(str(state.fips)):
+                d = {
+                    "state_code":us.states.lookup(state.fips).abbr,
+                    "data":node_data[-1] if node_data[-1] is not None else 0,
+                    "state":state.node_name
+                    
+                }
+                data.update({j:d})
+                j += 1
+                if node_data[-1] == 0 or (node_data and node_data[-1] is None):
+                    zero_data.append(state.node_name + ", " + state.parent.node_name)
+                
+        df = pd.DataFrame.from_dict(data, orient='index')
+        if not df.empty:
+            fig = px.choropleth(
+                df, 
+                locations='state_code', 
+                color='data',
+                locationmode="USA-states",
+                color_continuous_scale=map_color_scale,
+                scope="usa",
+                labels={'data':data_type},
+                hover_name="state"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type)
+            for i in zero_data:
+                st.markdown("* " + i)
+        else:
+            st.warning("No data for states available with selected data type")
+
+    elif map_type == "US State":
+        state = st.sidebar.selectbox("Select State", [i.node_name for i in  world_node.get_child_node("US").get_children()])
+        
+        with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
+            counties_fips = json.load(response)
+        
+        counties = [i for i in world_node.get_child_node("US").get_child_node(state).get_children()]
+        
+        data = {}
+        zero_data = []
+        j = 0
+        for i, county in enumerate(counties):
+            if county.fips and county.fips in [i.get("id") for i in list(counties_fips.values())[1]]:
+                node_data = getattr(county, data_options.get(data_type))
+                if callable(node_data):
+                    node_data = node_data()
+                if node_data:
+                    d = {
+                        "fips":county.fips,
+                        "data":node_data[-1] if node_data[-1] is not None else 0,
+                        "county":county.node_name + ", " + county.parent.node_name
+                        
+                    }
+                    data.update({j:d})
+                    j += 1
+                    if node_data[-1] == 0:
+                        zero_data.append(county.node_name + ", " + county.parent.node_name)
+                    
+        df = pd.DataFrame.from_dict(data, orient='index')
+        if not df.empty:
+            fig = px.choropleth(
+                df, 
+                geojson=counties_fips, 
+                locations='fips', 
+                color='data',
+                color_continuous_scale=map_color_scale,
+                scope="usa",
+                center={"lon":float(world_node.get_child_node("US").get_child_node(state).longitude), "lat":float(world_node.get_child_node("US").get_child_node(state).latitude)},
+                labels={'data':data_type},
+                hover_name="county",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type)
+            for i in zero_data:
+                st.markdown("* " + i)
+        else:
+            st.warning("No data for state available with selected data type")
+                          
+    elif map_type == "European Countries":
+        countries = []
+        for country in world_node.get_children():
+            try:
+                iso2 = pc.country_alpha3_to_country_alpha2(country.iso3)
+            except KeyError:
+                continue
+            try:
+                continent = pc.country_alpha2_to_continent_code(iso2)
+                if continent == "EU":
+                    countries.append(country)
+            except KeyError:
+                continue
+            
+        data = {}
+        zero_data = []
+        j = 0
+        for i, country in enumerate(countries):
+            node_data = getattr(country, data_options.get(data_type))
+            if callable(node_data):
+                node_data = node_data()
+            if node_data and country.iso3:
+                d = {
+                    "iso_code":country.iso3,
+                    "data":node_data[-1] if node_data[-1] is not None else 0,
+                    "country":country.node_name
+                    
+                }
+                data.update({j:d})
+                j += 1
+                if node_data[-1] == 0 or (node_data and node_data[-1] is None):
+                    zero_data.append(country.node_name)
+                
+        df = pd.DataFrame.from_dict(data, orient='index')
+        if not df.empty:
+            fig = px.choropleth(
+                df, 
+                locations='iso_code', 
+                color='data',
+                scope="europe",
+                color_continuous_scale=map_color_scale,
+                labels={'data':data_type},
+                hover_name="country"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type)
+            for i in zero_data:
+                st.markdown("* " + i)
+        else:
+            st.warning("No data for countries available with selected data type")
+                  
+    elif map_type == "World":
+        countries = [i for i in  world_node.get_children()]
+
+        data = {}
+        zero_data = []
+        j = 0
+        for i, country in enumerate(countries):
+            node_data = getattr(country, data_options.get(data_type))
+            if callable(node_data):
+                node_data = node_data()
+            if node_data and country.iso3:
+                d = {
+                    "iso_code":country.iso3,
+                    "data":node_data[-1] if node_data[-1] is not None else 0,
+                    "country":country.node_name
+                    
+                }
+                data.update({j:d})
+                j += 1
+                if node_data[-1] == 0 or (node_data and node_data[-1] is None):
+                    zero_data.append(country.node_name)
+                
+        df = pd.DataFrame.from_dict(data, orient='index')
+        if not df.empty:
+            fig = px.choropleth(
+                df, 
+                locations='iso_code', 
+                color='data',
+                color_continuous_scale=map_color_scale,
+                labels={'data':data_type},
+                hover_name="country"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type)
+            for i in zero_data:
+                st.markdown("* " + i)
+        else:
+            st.warning("No data for counties available with selected data type")
+                                                
     
 elif mode == "Parsed Data - Time Series":
     data_type = st.sidebar.selectbox("Data Table Entry", sorted(data_options.keys()))

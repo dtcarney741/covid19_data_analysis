@@ -4,6 +4,9 @@ easygui
 matplotlib
 numpy
 plotly
+plotly-geo
+pycountry_convert
 statsmodels
 streamlit
 treelib
+us
