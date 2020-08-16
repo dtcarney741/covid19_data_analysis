@@ -736,15 +736,15 @@ class Covid19_Data:
 
                 # add data to the appropriate data array for the state
                 try:
-                    cases = int(row[self.__us_data_field_locations["CONFIRMED_CASES_COL"]])
+                    cases = int(float(row[self.__us_data_field_locations["CONFIRMED_CASES_COL"]]))
                 except:
                     cases = None
                 try:
-                    deaths = int(row[self.__us_data_field_locations["DEATHS_COL"]])
+                    deaths = int(float(row[self.__us_data_field_locations["DEATHS_COL"]]))
                 except:
                     deaths = None
                 try:
-                    tested = int(row[self.__us_data_field_locations["PEOPLE_TESTED_COL"]])
+                    tested = int(float(row[self.__us_data_field_locations["PEOPLE_TESTED_COL"]]))
                 except:
                     tested = None
                 try:
@@ -752,15 +752,15 @@ class Covid19_Data:
                 except:
                     rate = None
                 try:
-                    active = int(row[self.__us_data_field_locations["ACTIVE_CASES_COL"]])
+                    active = int(float(row[self.__us_data_field_locations["ACTIVE_CASES_COL"]]))
                 except:
                     active = None
                 try:
-                    recovered = int(row[self.__us_data_field_locations["RECOVERED_CASES_COL"]])
+                    recovered = int(float(row[self.__us_data_field_locations["RECOVERED_CASES_COL"]]))
                 except:
                     recovered = None
                 try:
-                    hospitalized = int(row[self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"]])
+                    hospitalized = int(float(row[self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"]]))
                 except:
                     hospitalized = None
 
@@ -828,11 +828,11 @@ class Covid19_Data:
 
                     # add data to the appropriate data array for the appropriate node
                     try:
-                        cases = int(row[self.__world_data_field_locations["CONFIRMED_CASES_COL"]])
+                        cases = int(float(row[self.__world_data_field_locations["CONFIRMED_CASES_COL"]]))
                     except:
                         cases = None
                     try:
-                        deaths = int(row[self.__world_data_field_locations["DEATHS_COL"]])
+                        deaths = int(float(row[self.__world_data_field_locations["DEATHS_COL"]]))
                     except:
                         deaths = None
                     try:
@@ -840,11 +840,11 @@ class Covid19_Data:
                     except:
                         rate = None
                     try:
-                        active = int(row[self.__world_data_field_locations["ACTIVE_CASES_COL"]])
+                        active = int(float(row[self.__world_data_field_locations["ACTIVE_CASES_COL"]]))
                     except:
                         active = None
                     try:
-                        recovered = int(row[self.__world_data_field_locations["RECOVERED_CASES_COL"]])
+                        recovered = int(float(row[self.__world_data_field_locations["RECOVERED_CASES_COL"]]))
                     except:
                         recovered = None
 
