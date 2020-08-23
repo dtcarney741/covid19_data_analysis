@@ -8,6 +8,7 @@ Created on Mon Jun 15 22:06:37 2020
 import copy
 import datetime
 import json
+import math
 import numpy as np
 import streamlit as st
 import os
@@ -805,6 +806,12 @@ elif mode == "Map":
     map_type = st.sidebar.selectbox("Map Mode", ["US Counties", "US States", "US State", "European Countries", "World"])
     data_type = st.sidebar.selectbox("Color Mode", sorted(data_options.keys()))
     map_color_scale = "turbid"
+    if st.sidebar.checkbox("Allow Animations", False):
+        animations = True
+    else:
+        animations = False
+    st.sidebar.markdown("###### (Turning off animations will speed up loading times significantly)")
+    st.sidebar.markdown("---")
     
     if map_type == "US Counties":
         with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
@@ -813,9 +820,21 @@ elif mode == "Map":
         counties = []
         for state in states:
             counties.extend(state.get_children())
-        data = {}
+        
+        # filter out some dates otherwise animation will be way to big to handle
+        days_in_between = math.ceil((dates[-1] - dates[0]).days / 13)  # 13 the max number of data points for counties
+                                                                       # otherwise the dataset becomes too big for the animation
+                                                                       # to handle
+        valid_dates = [dates[-1]]
+        i = 1
+        while valid_dates[-1] - (datetime.timedelta(days=days_in_between * i)) > dates[0]:
+            valid_dates.append(valid_dates[-1] - (datetime.timedelta(days=days_in_between * i)))
+        
+        anim_data = {}
+        no_anim_data = {}
         zero_data = []
         j = 0
+        
         for i, county in enumerate(counties):
             if county.fips and county.fips in [i.get("id") for i in list(counties_fips.values())[1]]:
                 node_data = getattr(county, data_options.get(data_type))
@@ -828,15 +847,42 @@ elif mode == "Map":
                         "county":county.node_name + ", " + county.parent.node_name
                         
                     }
-                    data.update({j:d})
-                    j += 1
+                    no_anim_data.update({j:d})
+                    for k, datapoint in enumerate(node_data):
+                        d = {
+                            "fips":county.fips,
+                            "county":county.node_name + ", " + county.parent.node_name,
+                            "data":datapoint if datapoint is not None else 0,
+                            "date":str(dates[k]),                            
+                        }
+                        if dates[k] in valid_dates:
+                            anim_data.update({j:d})
+                            j += 1
+                        
                     if node_data[-1] == 0 or (node_data and node_data[-1] is None):
                         zero_data.append(county.node_name + ", " + county.parent.node_name)
-                    
-        df = pd.DataFrame.from_dict(data, orient='index')
-        if not df.empty:
+        df_anim = pd.DataFrame.from_dict(anim_data, orient='index')
+        df_no_anim = pd.DataFrame.from_dict(no_anim_data, orient='index')
+        
+        if not df_anim.empty and not df_no_anim.empty and animations:
             fig = px.choropleth(
-                df, 
+                df_anim, 
+                geojson=counties_fips, 
+                locations='fips', 
+                color='data',
+                animation_frame="date",
+                color_continuous_scale=map_color_scale,
+                scope="usa",
+                labels={'data':data_type},
+                hover_name="county"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type + "as of Today")
+            for i in zero_data:
+                st.markdown("* " + i)
+        elif not df_anim.empty and not df_no_anim.empty:
+            fig = px.choropleth(
+                df_no_anim, 
                 geojson=counties_fips, 
                 locations='fips', 
                 color='data',
@@ -846,16 +892,17 @@ elif mode == "Map":
                 hover_name="county"
             )
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("## Areas with 0 " + data_type)
+            st.markdown("## Areas with 0 " + data_type + "as of Today")
             for i in zero_data:
-                st.markdown("* " + i)
+                st.markdown("* " + i)            
         else:
             st.warning("No data for counties available with selected data type")
 
     elif map_type == "US States":
         states = [i for i in  world_node.get_child_node("US").get_children()]
 
-        data = {}
+        anim_data = {}
+        no_anim_data = {}
         zero_data = []
         j = 0
         for i, state in enumerate(states):
@@ -869,27 +916,60 @@ elif mode == "Map":
                     "state":state.node_name
                     
                 }
-                data.update({j:d})
-                j += 1
+                no_anim_data.update({j:d})
+                for k, datapoint in enumerate(node_data):
+                    d = {
+                        "state_code":us.states.lookup(state.fips).abbr,
+                        "data":datapoint if datapoint is not None else 0,
+                        "date":str(dates[k]),
+                        "state":state.node_name
+                        
+                    }
+
+                    anim_data.update({j:d})
+                    j += 1
+                
                 if node_data[-1] == 0 or (node_data and node_data[-1] is None):
                     zero_data.append(state.node_name + ", " + state.parent.node_name)
-                
-        df = pd.DataFrame.from_dict(data, orient='index')
-        if not df.empty:
+            
+        df_anim = pd.DataFrame.from_dict(anim_data, orient='index')
+        df_no_anim = pd.DataFrame.from_dict(no_anim_data, orient='index')
+
+        if not df_anim.empty and not df_no_anim.empty and animations:
             fig = px.choropleth(
-                df, 
+                df_anim, 
                 locations='state_code', 
-                color='data',
+                color="data",
+                animation_frame="date",
                 locationmode="USA-states",
                 color_continuous_scale=map_color_scale,
                 scope="usa",
                 labels={'data':data_type},
-                hover_name="state"
+                hover_name="state",
             )
+            delay = st.sidebar.number_input("Animation Delay", min_value=5, max_value=1000, value=5)
+            fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = delay
+
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("## Areas with 0 " + data_type)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
             for i in zero_data:
                 st.markdown("* " + i)
+        elif not df_anim.empty and not df_no_anim.empty:
+            fig = px.choropleth(
+                df_no_anim, 
+                locations='state_code', 
+                color="data",
+                locationmode="USA-states",
+                color_continuous_scale=map_color_scale,
+                scope="usa",
+                labels={'data':data_type},
+                hover_name="state",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
+            for i in zero_data:
+                st.markdown("* " + i)            
+                
         else:
             st.warning("No data for states available with selected data type")
 
@@ -901,7 +981,17 @@ elif mode == "Map":
         
         counties = [i for i in world_node.get_child_node("US").get_child_node(state).get_children()]
         
-        data = {}
+        # filter out some dates otherwise animation will be way to big to handle
+        days_in_between = math.ceil((dates[-1] - dates[0]).days / 13)  # 13 the max number of data points for counties
+                                                                       # otherwise the dataset becomes too big for the animation
+                                                                       # to handle
+        valid_dates = [dates[-1]]
+        i = 1
+        while valid_dates[-1] - (datetime.timedelta(days=days_in_between * i)) > dates[0]:
+            valid_dates.append(valid_dates[-1] - (datetime.timedelta(days=days_in_between * i)))
+        
+        anim_data = {}
+        no_anim_data = {}
         zero_data = []
         j = 0
         for i, county in enumerate(counties):
@@ -916,16 +1006,29 @@ elif mode == "Map":
                         "county":county.node_name + ", " + county.parent.node_name
                         
                     }
-                    data.update({j:d})
-                    j += 1
+                    no_anim_data.update({j:d})
+                    for k, datapoint in enumerate(node_data):
+                        d = {
+                            "fips":county.fips,
+                            "data":datapoint if datapoint is not None else 0,
+                            "county":county.node_name + ", " + county.parent.node_name,
+                            "date":str(dates[k])
+                        }
+                        if dates[k] in valid_dates:
+                            anim_data.update({j:d})
+                            j += 1
+
                     if node_data[-1] == 0:
                         zero_data.append(county.node_name + ", " + county.parent.node_name)
-                    
-        df = pd.DataFrame.from_dict(data, orient='index')
-        if not df.empty:
+
+        df_anim = pd.DataFrame.from_dict(anim_data, orient='index')
+        df_no_anim = pd.DataFrame.from_dict(no_anim_data, orient='index')
+        
+        if not df_anim.empty and not df_no_anim.empty and animations:
             fig = px.choropleth(
-                df, 
+                df_anim, 
                 geojson=counties_fips, 
+                animation_frame="date",
                 locations='fips', 
                 color='data',
                 color_continuous_scale=map_color_scale,
@@ -935,9 +1038,27 @@ elif mode == "Map":
                 hover_name="county",
             )
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("## Areas with 0 " + data_type)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
             for i in zero_data:
                 st.markdown("* " + i)
+                
+        elif not df_anim.empty and not df_no_anim.empty:
+            fig = px.choropleth(
+                df_no_anim, 
+                geojson=counties_fips, 
+                locations='fips', 
+                color="data",
+                color_continuous_scale=map_color_scale,
+                scope="usa",
+                center={"lon":float(world_node.get_child_node("US").get_child_node(state).longitude), "lat":float(world_node.get_child_node("US").get_child_node(state).latitude)},
+                labels={'data':data_type},
+                hover_name="county",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
+            for i in zero_data:
+                st.markdown("* " + i)            
+                
         else:
             st.warning("No data for state available with selected data type")
                           
@@ -955,7 +1076,8 @@ elif mode == "Map":
             except KeyError:
                 continue
             
-        data = {}
+        anim_data = {}
+        no_anim_data = {}
         zero_data = []
         j = 0
         for i, country in enumerate(countries):
@@ -967,35 +1089,66 @@ elif mode == "Map":
                     "iso_code":country.iso3,
                     "data":node_data[-1] if node_data[-1] is not None else 0,
                     "country":country.node_name
-                    
                 }
-                data.update({j:d})
+                no_anim_data.update({j:d})
+                for k, datapoint in enumerate(node_data):
+                    d = {
+                        "iso_code":country.iso3,
+                        "data":datapoint if datapoint is not None else 0,
+                        "country":country.node_name,
+                        "date":str(dates[k])
+                    }
+
+                    anim_data.update({j:d})
+                    j += 1
+
                 j += 1
                 if node_data[-1] == 0 or (node_data and node_data[-1] is None):
                     zero_data.append(country.node_name)
                 
-        df = pd.DataFrame.from_dict(data, orient='index')
-        if not df.empty:
+        df_anim = pd.DataFrame.from_dict(anim_data, orient='index')
+        df_no_anim = pd.DataFrame.from_dict(no_anim_data, orient='index')
+        
+        if not df_anim.empty and not df_no_anim.empty and animations:
             fig = px.choropleth(
-                df, 
+                df_anim, 
                 locations='iso_code', 
+                animation_frame="date",
                 color='data',
                 scope="europe",
                 color_continuous_scale=map_color_scale,
                 labels={'data':data_type},
                 hover_name="country"
             )
+            delay = st.sidebar.number_input("Animation Delay", min_value=5, max_value=1000, value=5)
+            fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = delay
+            
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("## Areas with 0 " + data_type)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
             for i in zero_data:
                 st.markdown("* " + i)
+        elif not df_anim.empty and not df_no_anim.empty:
+            fig = px.choropleth(
+                df_no_anim, 
+                locations='iso_code', 
+                color="data",
+                color_continuous_scale=map_color_scale,
+                scope="europe",
+                labels={'data':data_type},
+                hover_name="country",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
+            for i in zero_data:
+                st.markdown("* " + i)        
         else:
             st.warning("No data for countries available with selected data type")
                   
     elif map_type == "World":
         countries = [i for i in  world_node.get_children()]
 
-        data = {}
+        anim_data = {}
+        no_anim_data = {}
         zero_data = []
         j = 0
         for i, country in enumerate(countries):
@@ -1007,31 +1160,59 @@ elif mode == "Map":
                     "iso_code":country.iso3,
                     "data":node_data[-1] if node_data[-1] is not None else 0,
                     "country":country.node_name
-                    
                 }
-                data.update({j:d})
-                j += 1
+                no_anim_data.update({j:d})
+                for k, datapoint in enumerate(node_data):
+                    d = {
+                        "iso_code":country.iso3,
+                        "data":datapoint if datapoint is not None else 0,
+                        "country":country.node_name,
+                        "date":str(dates[k])
+                    }
+
+                    anim_data.update({j:d})
+                    j += 1
+
                 if node_data[-1] == 0 or (node_data and node_data[-1] is None):
                     zero_data.append(country.node_name)
                 
-        df = pd.DataFrame.from_dict(data, orient='index')
-        if not df.empty:
+        df_anim = pd.DataFrame.from_dict(anim_data, orient='index')
+        df_no_anim = pd.DataFrame.from_dict(no_anim_data, orient='index')
+        
+        if not df_anim.empty and not df_no_anim.empty and animations:
             fig = px.choropleth(
-                df, 
+                df_anim, 
                 locations='iso_code', 
+                animation_frame="date",
                 color='data',
                 color_continuous_scale=map_color_scale,
                 labels={'data':data_type},
                 hover_name="country"
             )
+            delay = st.sidebar.number_input("Animation Delay", min_value=5, max_value=1000, value=5)
+            fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = delay
+            
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("## Areas with 0 " + data_type)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
             for i in zero_data:
                 st.markdown("* " + i)
+        elif not df_anim.empty and not df_no_anim.empty:
+            fig = px.choropleth(
+                df_no_anim, 
+                locations='iso_code', 
+                color="data",
+                color_continuous_scale=map_color_scale,
+                labels={'data':data_type},
+                hover_name="country",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("## Areas with 0 " + data_type + " as of Today")
+            for i in zero_data:
+                st.markdown("* " + i)  
         else:
             st.warning("No data for counties available with selected data type")
                                                 
-    
+ 
 elif mode == "Parsed Data - Time Series":
     data_type = st.sidebar.selectbox("Data Table Entry", sorted(data_options.keys()))
     plotted_areas = get_regions(world_node)
