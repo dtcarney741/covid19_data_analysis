@@ -909,7 +909,7 @@ elif mode == "Map":
             node_data = getattr(state, data_options.get(data_type))
             if callable(node_data):
                 node_data = node_data()
-            if node_data and us.states.lookup(str(state.fips)):
+            if node_data and us.states.lookup(state.fips):
                 d = {
                     "state_code":us.states.lookup(state.fips).abbr,
                     "data":node_data[-1] if node_data[-1] is not None else 0,

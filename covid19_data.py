@@ -907,6 +907,10 @@ class Covid19_Data:
                 fips = row[self.__population_field_locations["FIPS_COL"]]
                 if fips == "":
                     fips = None
+                elif state != '' and county == '':
+                    # this code is special handling of the FIPS data because the file has incorrectly padded 0s in front of state FIPS codes 
+                    # to make them 5 digit codes instead of the 2 digit codes they are supposed to be
+                    fips = fips[3:]
                 try:
                     population = int(row[self.__population_field_locations["POPULATION_COL"]])
                 except:
