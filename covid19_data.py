@@ -4,6 +4,7 @@ import json
 import multiprocessing as mp
 import os
 import requests
+import math
 
 import github_directory_tree
 import matplotlib_gui
@@ -375,13 +376,13 @@ class Covid19_Tree_Node:
         
     def get_daily_new_cases_incident_rate(self):
         """
-        calculates the daily new cases incident rate (new cases per 100K of population) of a node as:
+        Description: calculates the daily new cases incident rate (new cases per 100K of population) of a node as:
             daily new cases[i] / population * 100000
 
         Returns
         -------
-        new_cases_rate : list
-            list of new cases rates.
+        rate : list
+            list of new cases rates if valid data, None if no valid data.
 
         """
         new_cases = self.get_daily_new_cases()
@@ -394,6 +395,57 @@ class Covid19_Tree_Node:
                     rate.append(value)
                 else:
                     rate.append(None)
+            return rate
+        else:
+            return None
+
+    def get_log_7day_moving_average_daily_new_cases_incident_rate(self):
+        """
+        Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
+            log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-6])/days)
+        Inputs:
+            days - number of days for moving average
+        Returns
+        -------
+        self.get_log_moving_average_daily_new_cases_incident_rate(7)
+            list of new cases rates if valid data, None if no valid data
+        """
+        return self.get_log_moving_average_daily_new_cases_incident_rate(7)
+        
+    def get_log_moving_average_daily_new_cases_incident_rate(self, days):
+        """
+        Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
+            log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-days-1])/days)
+        Inputs:
+            days - number of days for moving average
+        Returns
+        -------
+        rate : list
+            list of log of moving average of new cases rates if valid data (bottoms out at 0 to focus range on high incident rate nodes), None if no valid data
+        """
+        new_cases_rate = self.get_daily_new_cases_incident_rate()
+        if new_cases_rate:
+            moving_average_sum = 0
+            rate = []
+            for i in range(1,len(new_cases_rate)):
+                if new_cases_rate[i]:
+                    add_value = new_cases_rate[i]
+                else:
+                    add_value = 0
+                if i >= days:
+                    if new_cases_rate[i-days]:
+                        sub_value = new_cases_rate[i-days]
+                    else:
+                        sub_value = 0
+                    moving_average_sum = moving_average_sum + add_value - sub_value
+                else:
+                    moving_average_sum = moving_average_sum + add_value
+                moving_average = moving_average_sum/days
+                if moving_average > 1:
+                    value = math.log10(moving_average)
+                else:
+                    value = 0
+                rate.append(value)
             return rate
         else:
             return None
@@ -1371,6 +1423,31 @@ class Covid19_Data:
 
         return integer_to_dates_table, dates_to_integer_table
 
+    def get_tree_node(self, country, state, county):
+        """Description: accessor function for a specific tree node
+        Inputs:
+            country - country to get node of in country / state / county path
+            state_list - optional, state to get node of in country / state / county path
+            county_list - optional, county to get node of in country / state / county path
+        Outputs:
+            returns
+                node - the specified Covid19_Tree_Node object if it can be found, None if it cannot
+        """
+        country_node = self.time_series_data_tree.get_child_node(country)
+        if (country_node == None):
+            return None
+        state_node = country_node.get_child_node(state)
+        if (state_node == None):
+            node = country_node
+        else:
+            county_node = state_node.get_child_node(county)
+            if (county_node == None):
+                node = state_node
+            else:
+                node = county_node
+
+        return node
+        
     def plot_data(self, country_list, state_list, county_list, plot_type):
         """Description: function to create an XY plot of specified state/county pairs for the specified plot type
         Inputs:
@@ -1397,7 +1474,7 @@ class Covid19_Data:
                 "HOSPITALIZATIONS_INCIDENT_RATE"
                 "DAILY_NEW_CASES_INCIDENT_RATE"
 
-        Outpus:
+        Outputs:
             A plot window is opened
         """
         start_dates = []

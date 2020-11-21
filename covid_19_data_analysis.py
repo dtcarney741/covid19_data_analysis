@@ -84,6 +84,8 @@ while (choice.upper() != 'Q'):
             
     elif (choice.upper() == "DEBUG1"):
         print("Debug 1 command")
+        node = c19_data.get_tree_node("US", None, None)
+        print(node.get_log_moving_average_daily_new_cases_incident_rate(7))
     elif (choice.upper() == "DEBUG2"):
         print("Debug 2 command")
     elif (choice.upper() == 'M'):
