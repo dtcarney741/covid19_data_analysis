@@ -956,13 +956,24 @@ class Covid19_Data:
                 iso3 = row[self.__population_field_locations["ISO3_COL"]]
                 if iso3 == "":
                     iso3 = None
+
+                # multiple different formats for the FIPS codes for states have shown up in the Johns Hopkins data file
+                # The correct format is a 2 digit string value for states (ie 01, 02, .., 52)
+                # We've also seen values padded with leading zeros (ie 00001, 00002, ..., 00052)
+                # We've also seen values that look like integers (1, 2, ..., 52)
+                # This code has had to change multiple times, and should now be resilient to whatever they throw at us!
                 fips = row[self.__population_field_locations["FIPS_COL"]]
-                if fips == "":
-                    fips = None
-                elif state != '' and county == '':
-                    # this code is special handling of the FIPS data because the file has incorrectly padded 0s in front of state FIPS codes 
-                    # to make them 5 digit codes instead of the 2 digit codes they are supposed to be
-                    fips = fips[3:]
+                try:
+                    fips_val = int(fips)                
+                except:
+                    fips_val = None
+                if fips_val != None and state != '' and county == '':
+                    # formatting for state
+                    fips = "{0:02}".format(fips_val)
+                elif fips_val != None and state != '' and county != '':
+                    # formatting for county
+                    fips = "{0:05}".format(fips_val)
+
                 try:
                     population = int(row[self.__population_field_locations["POPULATION_COL"]])
                 except:
