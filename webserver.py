@@ -450,12 +450,8 @@ data_options = {
     "Recovery Rate":"get_recovery_rate",
     "Confirmed Cases to People Tested Ratio":"get_ratio_confirmed_cases_to_people_tested",
     "New Confirmed Cases to People Tested Ratio":"get_daily_ratio_confirmed_cases_to_people_tested",
-    "Hospitalizations":"hospitalizations_time_series_data",
-    "Daily New Hospitalizations":"get_daily_new_hospitalizations",
     "Case Fatality Rate":"get_case_fatality_rate",
-    "Testing Incident":"get_calculated_people_tested_incident_rate",
-    "Hospitalizations Incident":"get_hopsitalizations_incident_rate",
-    "Daily New Hospitalizations Incident":"get_daily_new_hospitalizations_incident_rate"
+    "Testing Incident":"get_calculated_people_tested_incident_rate"
 }
 
 if st.button("Clear Cache"):

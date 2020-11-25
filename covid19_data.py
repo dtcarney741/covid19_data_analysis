@@ -24,7 +24,6 @@ class Covid19_Tree_Node:
         self.active_cases_time_series_data = []
         self.recovered_cases_time_series_data = []
         self.population = None
-        self.hospitalizations_time_series_data = []
         self.latitude = None
         self.longitude = None
         self.iso3 = None
@@ -122,15 +121,6 @@ class Covid19_Tree_Node:
         for _ in range(0, length):
             self.recovered_cases_time_series_data.append(None)
 
-    def initialize_hospitalizations(self, length):
-        """Description: Initialize the recovered cases data array
-        Inputs: length - number of data values to initailize
-        Outputs: self.hospitalizations_time_series_data[0:length-1] is initialized with None
-        """
-        self.hospitalizations_time_series_data = []
-        for _ in range(0, length):
-            self.hospitalizations_time_series_data.append(None)
-
     def get_daily_new_cases(self):
         """Description: Calculate and return list of derived data
         Inputs: None
@@ -185,25 +175,6 @@ class Covid19_Tree_Node:
                     val = None
                 daily_new_people_tested.append(val)
             return daily_new_people_tested
-        else:
-            return None
-
-    def get_daily_new_hospitalizations(self):
-        """Description: Calculate and return list of derived data
-        Inputs: None
-        Outputs: daily_new_hospitalizations[] where each element is defined as: self.hospitalizations_time_series_data[i] - self.hospitalizations_time_series_data[i-1]
-                    and daily_new_people_tested[0] = None
-        """
-        if self.hospitalizations_time_series_data:
-            daily_new_hospitalizations = []
-            daily_new_hospitalizations.append(None)
-            for i in range(1, len(self.hospitalizations_time_series_data)):
-                if self.hospitalizations_time_series_data[i] != None and self.hospitalizations_time_series_data[i-1] != None:
-                    val = self.hospitalizations_time_series_data[i] - self.hospitalizations_time_series_data[i-1]
-                else:
-                    val = None
-                daily_new_hospitalizations.append(val)
-            return daily_new_hospitalizations
         else:
             return None
 
@@ -351,28 +322,6 @@ class Covid19_Tree_Node:
             return rate
         else:
             return None
-
-    def get_hopsitalizations_incident_rate(self):
-        """
-        calculates the hospitalizations incident rate (hospitalizations per 100K of population) of a node as hospitalizations / population * 100000
-
-        Returns
-        -------
-        test_rate : list
-            list of test rates.
-
-        """
-        if self.hospitalizations_time_series_data and self.population and self.population != 0:
-            rate = []
-            for i in range(0, len(self.hospitalizations_time_series_data)):
-                if self.hospitalizations_time_series_data[i]:
-                    value = self.hospitalizations_time_series_data[i] / self.population * 100000
-                    rate.append(value)
-                else:
-                    rate.append(None)
-            return rate
-        else:
-            return None
         
     def get_daily_new_cases_incident_rate(self):
         """
@@ -450,32 +399,6 @@ class Covid19_Tree_Node:
         else:
             return None
 
-    def get_daily_new_hospitalizations_incident_rate(self):
-        """
-        calculates the daily new hospitalizations incident rate (new hospitalizations per 100K of population) of a node as:
-            daily new hospitalizations[i] / population * 100000
-
-        Returns
-        -------
-        new_hospitalizations_rate : list
-            list of new hospitalizations rates.
-
-        """
-        new_hospitalizations = self.get_daily_new_hospitalizations()
-        
-        if new_hospitalizations and self.population and self.population != 0:
-            rate = []
-            for i in range(0, len(new_hospitalizations)):
-                if new_hospitalizations[i]:
-                    value = new_hospitalizations[i] / self.population * 100000
-                    rate.append(value)
-                else:
-                    rate.append(None)
-            return rate
-        else:
-            return None
-
-
 class Covid19_Data:
 
     def __init__(self):
@@ -506,8 +429,7 @@ class Covid19_Data:
             "PEOPLE_TESTED_COL": -1,
             "INCIDENT_RATE_COL": -1,
             "ACTIVE_CASES_COL": -1,
-            "RECOVERED_CASES_COL": -1,
-            "PEOPLE_HOSPITALIZED_COL": -1
+            "RECOVERED_CASES_COL": -1
             }
         self.__world_data_field_locations = {
                 "HEADER_ROW": -1,
@@ -553,7 +475,7 @@ class Covid19_Data:
         Inputs:
             node - the tree node whose data values are to be updated
             data_types - list containing which data types are to be updated.  Possible values are:
-                            'DEATHS', 'CONFIRMED', 'TESTED', 'INCIDENT', 'ACTIVE', 'RECOVERED', 'HOSPITALIZED'
+                            'DEATHS', 'CONFIRMED', 'TESTED', 'INCIDENT', 'ACTIVE', 'RECOVERED'
             data_values - list with the value to be set for the corresponding data type (list correspondance is 1 to 1 with data_types)
             index - the list index into which the data value is to be placed
             aggregate_to_parent - True or False to indicate whether the data should be summed into the parent node's data array
@@ -606,13 +528,6 @@ class Covid19_Data:
                     node.recovered_cases_time_series_data[index] = data_values[i]
                 elif data_values[i]:
                     node.recovered_cases_time_series_data[index] = node.recovered_cases_time_series_data[index] + data_values[i]
-            elif data_type == 'HOSPITALIZED':
-                if not node.hospitalizations_time_series_data:
-                    node.initialize_hospitalizations(len(self.time_series_dates))
-                if absolute or node.hospitalizations_time_series_data[index] == None:
-                    node.hospitalizations_time_series_data[index] = data_values[i]
-                elif data_values[i]:
-                    node.hospitalizations_time_series_data[index] = node.hospitalizations_time_series_data[index] + data_values[i]
 
             i = i + 1
 
@@ -811,14 +726,10 @@ class Covid19_Data:
                     recovered = int(float(row[self.__us_data_field_locations["RECOVERED_CASES_COL"]]))
                 except:
                     recovered = None
-                try:
-                    hospitalized = int(float(row[self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"]]))
-                except:
-                    hospitalized = None
 
                 # set values that will be aggregated to the parent
-                data_types = ['TESTED', 'ACTIVE', 'RECOVERED', 'HOSPITALIZED']
-                data_values = [tested, active, recovered, hospitalized]
+                data_types = ['TESTED', 'ACTIVE', 'RECOVERED']
+                data_values = [tested, active, recovered]
                 self.__set_node_data_values(state_node, data_types, data_values, data_index, aggregate_to_parent=True, absolute=True)
 
                 # set values that will not be aggregated to the parent
@@ -1292,7 +1203,6 @@ class Covid19_Data:
         self.__us_data_field_locations["INCIDENT_RATE_COL"] = -1
         self.__us_data_field_locations["ACTIVE_CASES_COL"] = -1
         self.__us_data_field_locations["RECOVERED_CASES_COL"] = -1
-        self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"] = -1
 
         i = 0
         while not found_everything and i < len(row):
@@ -1319,9 +1229,6 @@ class Covid19_Data:
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "ACTIVE":
                 self.__us_data_field_locations["ACTIVE_CASES_COL"] = i
-                self.__us_data_field_locations["HEADER_ROW"] = row_num
-            elif row[i].upper() == "PEOPLE_HOSPITALIZED":
-                self.__us_data_field_locations["PEOPLE_HOSPITALIZED_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "LAT":
                 self.__us_data_field_locations["LATITUDE_COL"] = i
@@ -1471,7 +1378,6 @@ class Covid19_Data:
                 "PEOPLE_TESTED"
                 "ACTIVE_CASES"
                 "RECOVERED_CASES"
-                "HOSPITALIZATIONS"
                 "DAILY_NEW_CASES"
                 "DAILY_NEW_DEATHS"
                 "DAILY_NEW_PEOPLE_TESTED"
@@ -1482,7 +1388,6 @@ class Covid19_Data:
                 "CALCULATED_CASES_INCIDENT_RATE"
                 "CALCULATED_DEATHS_INCIDENT_RATE"
                 "CALCULATED_PEOPLE_TESTED_INCIDENT_RATE"
-                "HOSPITALIZATIONS_INCIDENT_RATE"
                 "DAILY_NEW_CASES_INCIDENT_RATE"
 
         Outputs:
@@ -1528,9 +1433,6 @@ class Covid19_Data:
             elif plot_type == "RECOVERED_CASES":
                 y = plot_node.recovered_cases_time_series_data
                 plot_label = "Recovered Cases"
-            elif plot_type == "HOSPITALIZATIONS":
-                y = plot_node.hopsitalizations_time_series_data
-                plot_label = "Hospitalizations"
             elif plot_type == "DAILY_NEW_CASES":
                 y = plot_node.get_daily_new_cases()
                 plot_label = "Daily New Cases"
@@ -1561,9 +1463,6 @@ class Covid19_Data:
             elif plot_type == "CALCULATED_PEOPLE_TESTED_INCIDENT_RATE":
                 y = plot_node.get_calculated_people_tested_incident_rate()
                 plot_label = "People Tested per 100K Population"
-            elif plot_type == "HOSPITALIZATIONS_INCIDENT_RATE":
-                y = plot_node.get_hospitalizations_incident_rate()
-                plot_label = "Hospitalizations per 100K Population"
             elif plot_type == "DAILY_NEW_CASES_INCIDENT_RATE":
                 y = plot_node.get_daily_new_cases_incident_rate()
                 plot_label = "Daily New Cases per 100K Population"
@@ -1614,7 +1513,6 @@ def dump_tree_to_file(node, file_location):
                 "active_cases":child_node.active_cases_time_series_data,
                 "recovered_cases":child_node.recovered_cases_time_series_data,
                 "population":child_node.population,
-                "hospitalizations":child_node.hospitalizations_time_series_data,
                 "latitude":child_node.latitude,
                 "longitude":child_node.longitude,
             }
@@ -1662,7 +1560,6 @@ def read_tree_from_file(file_location):
         country_node.active_cases_time_series_data = country["data"].get("active_cases")
         country_node.recovered_cases_time_series_data = country["data"].get("recovered_cases")
         country_node.population = country["data"].get("population")
-        country_node.hospitalizations_time_series_data = country["data"].get("hospitalizations")
         country_node.latitude = country["data"].get("latitude")
         country_node.longitude = country["data"].get("longitude")
 
@@ -1682,7 +1579,6 @@ def read_tree_from_file(file_location):
             state_node.active_cases_time_series_data = state["data"].get("active_cases")
             state_node.recovered_cases_time_series_data = state["data"].get("recovered_cases")
             state_node.population = state["data"].get("population")
-            state_node.hospitalizations_time_series_data = state["data"].get("hospitalizations")
             state_node.latitude = state["data"].get("latitude")
             state_node.longitude = state["data"].get("longitude")
 
@@ -1701,7 +1597,6 @@ def read_tree_from_file(file_location):
                 county_node.active_cases_time_series_data = county["data"].get("active_cases")
                 county_node.recovered_cases_time_series_data = county["data"].get("recovered_cases")
                 county_node.population = county["data"].get("population")
-                county_node.hospitalizations_time_series_data = county["data"].get("hospitalizations")
                 county_node.latitude = county["data"].get("latitude")
                 county_node.longitude = county["data"].get("longitude")
 
