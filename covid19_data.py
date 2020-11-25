@@ -348,7 +348,7 @@ class Covid19_Tree_Node:
         else:
             return None
 
-    def get_log_7day_moving_average_daily_new_cases_incident_rate(self):
+    def get_log10_7day_moving_average_daily_new_cases_incident_rate(self):
         """
         Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
             log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-6])/days)
@@ -359,14 +359,28 @@ class Covid19_Tree_Node:
         self.get_log_moving_average_daily_new_cases_incident_rate(7)
             list of new cases rates if valid data, None if no valid data
         """
-        return self.get_log_moving_average_daily_new_cases_incident_rate(7)
+        return self.get_log_moving_average_daily_new_cases_incident_rate(7, 10)
+
+    def get_log2_7day_moving_average_daily_new_cases_incident_rate(self):
+        """
+        Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
+            log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-6])/days)
+        Inputs:
+            days - number of days for moving average
+        Returns
+        -------
+        self.get_log_moving_average_daily_new_cases_incident_rate(7)
+            list of new cases rates if valid data, None if no valid data
+        """
+        return self.get_log_moving_average_daily_new_cases_incident_rate(7, 2)
         
-    def get_log_moving_average_daily_new_cases_incident_rate(self, days):
+    def get_log_moving_average_daily_new_cases_incident_rate(self, days, log_base=None):
         """
         Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
             log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-days-1])/days)
         Inputs:
             days - number of days for moving average
+            log_Base - optional, the base of the logarithm to use (if None then natural log is used)
         Returns
         -------
         rate : list
@@ -391,7 +405,7 @@ class Covid19_Tree_Node:
                     moving_average_sum = moving_average_sum + add_value
                 moving_average = moving_average_sum/days
                 if moving_average > 1:
-                    value = math.log10(moving_average)
+                    value = math.log(moving_average, log_base)
                 else:
                     value = 0
                 rate.append(value)
