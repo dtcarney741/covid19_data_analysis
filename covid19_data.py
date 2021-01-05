@@ -1034,6 +1034,9 @@ class Covid19_Data:
 
                 if status == False:
                     return False
+                
+            pool.close()
+            pool.join()
 
         return True
 
