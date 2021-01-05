@@ -348,6 +348,31 @@ class Covid19_Tree_Node:
         else:
             return None
 
+    def get_daily_new_deaths_incident_rate(self):
+        """
+        Description: calculates the daily new deaths incident rate (deaths per 100K of population) of a node as:
+            daily new deaths[i] / population * 100000
+
+        Returns
+        -------
+        rate : list
+            list of new cases rates if valid data, None if no valid data.
+
+        """
+        new_deaths = self.get_daily_new_deaths()
+        
+        if new_deaths and self.population and self.population != 0:
+            rate = []
+            for i in range(0, len(new_deaths)):
+                if new_deaths[i]:
+                    value = new_deaths[i] / self.population * 100000
+                    rate.append(value)
+                else:
+                    rate.append(None)
+            return rate
+        else:
+            return None
+
     def get_log10_7day_moving_average_daily_new_cases_incident_rate(self):
         """
         Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:

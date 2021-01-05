@@ -444,6 +444,7 @@ data_options = {
     "Confirmed Cases Incident - Calculated":"get_calculated_cases_incident_rate",
     "Deaths Incident":"get_calculated_deaths_incident_rate",
     "Daily New Confirmed Cases Incident" : "get_daily_new_cases_incident_rate",
+    "Daily New Deaths Incident" : "get_daily_new_deaths_incident_rate",
     "Log10(mvg_avg(Daily New Confirmed Cases Incident))": "get_log10_7day_moving_average_daily_new_cases_incident_rate",
     "Log2(mvg_avg(Daily New Confirmed Cases Incident))": "get_log2_7day_moving_average_daily_new_cases_incident_rate",
     "Active Cases":"active_cases_time_series_data",
