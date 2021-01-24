@@ -1260,7 +1260,9 @@ class Covid19_Data:
             elif row[i].upper() == "DEATHS":
                 self.__us_data_field_locations["DEATHS_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
-            elif row[i].upper() == "PEOPLE_TESTED":
+            elif row[i].upper() == "PEOPLE_TESTED" or row[i].upper() == "TOTAL_TEST_RESULTS":
+                # on 11-9-2021 Johns Hopkins changed the heading of this field from PEOPLE_TESTED to TOTAL_TEST_RESULTS with 
+                # the reasoning that testing data for several states is opaque.
                 self.__us_data_field_locations["PEOPLE_TESTED_COL"] = i
                 self.__us_data_field_locations["HEADER_ROW"] = row_num
             elif row[i].upper() == "INCIDENT_RATE":
