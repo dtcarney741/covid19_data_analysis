@@ -447,6 +447,7 @@ data_options = {
     "Daily New Deaths Incident" : "get_daily_new_deaths_incident_rate",
     "Log10(mvg_avg(Daily New Confirmed Cases Incident))": "get_log10_7day_moving_average_daily_new_cases_incident_rate",
     "Log2(mvg_avg(Daily New Confirmed Cases Incident))": "get_log2_7day_moving_average_daily_new_cases_incident_rate",
+    "Log2(mvg_avg(100*Daily New Deaths Incident))": "get_log2_7day_moving_average_daily_new_deaths_incident_rate",
     "Active Cases":"active_cases_time_series_data",
     "Recovered Cases":"recovered_cases_time_series_data",
     "Recovery Rate":"get_recovery_rate",

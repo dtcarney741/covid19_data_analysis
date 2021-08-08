@@ -381,48 +381,60 @@ class Covid19_Tree_Node:
             days - number of days for moving average
         Returns
         -------
-        self.get_log_moving_average_daily_new_cases_incident_rate(7)
-            list of new cases rates if valid data, None if no valid data
+            list of log10 of 7 day moving average of new cases rates if valid data, None if no valid data
         """
-        return self.get_log_moving_average_daily_new_cases_incident_rate(7, 10)
+        return self.get_log_moving_average(self.get_daily_new_cases_incident_rate(), 7, log_base=10)
 
     def get_log2_7day_moving_average_daily_new_cases_incident_rate(self):
         """
-        Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
-            log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-6])/days)
+        Description: calculates the log2 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
+            log2((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-6])/days)
         Inputs:
             days - number of days for moving average
         Returns
         -------
-        self.get_log_moving_average_daily_new_cases_incident_rate(7)
-            list of new cases rates if valid data, None if no valid data
+            list of log2 of 7 day moving average of new cases rates if valid data, None if no valid data
         """
-        return self.get_log_moving_average_daily_new_cases_incident_rate(7, 2)
-        
-    def get_log_moving_average_daily_new_cases_incident_rate(self, days, log_base=None):
+        return self.get_log_moving_average(self.get_daily_new_cases_incident_rate(), 7, log_base=2)
+
+    def get_log2_7day_moving_average_daily_new_deaths_incident_rate(self):
         """
-        Description: calculates the log10 of the moving average of daily new cases incident rate (new cases per 100K of population) of a node as:
-            log10((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-days-1])/days)
+        Description: calculates the log2 of the moving average of daily new deaths incident rate (new deaths per 100K of population) of a node as:
+            log2((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-6])/days)
         Inputs:
             days - number of days for moving average
-            log_Base - optional, the base of the logarithm to use (if None then natural log is used)
+        Returns
+        -------
+            list of log2 of 7 day moving average of new deaths rates if valid data, None if no valid data
+        """
+        return self.get_log_moving_average(self.get_daily_new_deaths_incident_rate(), 7, scale=100, log_base=2)
+        
+    def get_log_moving_average(self, data_set, days, scale=1, log_base=None):
+        """
+        Description: calculates the log base n of the moving average of the specified data set of a node as:
+            logn((daily new cases[i] + daily new cases[i-1] + ... + daily_new_cases[i-days-1])/days)
+        Inputs:
+            data_set - the set of points to calculate the log moving average on
+            days - number of days for moving average
+            scale - optional, factor to multiply each data point by (the log function only works for values above 1, so if a data set has many values below
+               1, it needs to be scaled for useful plots to be created)
+            log_base - optional, the base of the logarithm to use (if None then natural log is used)
         Returns
         -------
         rate : list
             list of log of moving average of new cases rates if valid data (bottoms out at 0 to focus range on high incident rate nodes), None if no valid data
         """
-        new_cases_rate = self.get_daily_new_cases_incident_rate()
-        if new_cases_rate:
+        if data_set:
             moving_average_sum = 0
             rate = []
-            for i in range(1,len(new_cases_rate)):
-                if new_cases_rate[i]:
-                    add_value = new_cases_rate[i]
+            for i in range(1,len(data_set)):
+                if data_set[i]:
+                    add_value = data_set[i] * scale
                 else:
                     add_value = 0
                 if i >= days:
-                    if new_cases_rate[i-days]:
-                        sub_value = new_cases_rate[i-days]
+                    if data_set[i-days]:
+                        sub_value = data_set[i-days] * scale
                     else:
                         sub_value = 0
                     moving_average_sum = moving_average_sum + add_value - sub_value
@@ -437,6 +449,7 @@ class Covid19_Tree_Node:
             return rate
         else:
             return None
+
 
 class Covid19_Data:
 
