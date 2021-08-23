@@ -238,11 +238,11 @@ def get_configuration(uid, areas, previous={}):
     radio = areas[0].radio("Smooth Graph", ['Yes', 'No'], default, key=str(uid) + "1")
     if radio.upper() == "YES":
         # test functionality of configuration screen
-        window_len = areas[1].slider("Filter Window Length", min_value=1, max_value=15, step=2, value=previous.get("window_length", 5), key=str(uid) + "1")
-        poly_order = areas[2].slider("Filter Polynomial Degree", min_value=0, max_value=15, step=1, value=previous.get("polyorder", 3), key=str(uid) + "2")
-        iters = areas[3].slider("Itrerations", min_value=0, max_value=30, step=1, value=previous.get("iters", 2), key=str(uid) + "3")
-        outlier_threshold = areas[4].slider("Outlier Threshold", min_value=0.0, max_value=5.0, step=0.1, value=previous.get("start_threshold", 3.0), key=str(uid) + "4")
-        threshold_stepdown = areas[5].slider("Outlier Threshold Stepdown", min_value=-1.0, max_value=1.0, step=.05, value=previous.get("threshold_stepdown", 0.25), key=str(uid) + "5")
+        window_len = areas[1].slider("Filter Window Length", min_value=1, max_value=15, step=2, value=previous.get("window_length", 5), key=str(uid) + "2")
+        poly_order = areas[2].slider("Filter Polynomial Degree", min_value=0, max_value=15, step=1, value=previous.get("polyorder", 3), key=str(uid) + "3")
+        iters = areas[3].slider("Itrerations", min_value=0, max_value=30, step=1, value=previous.get("iters", 2), key=str(uid) + "4")
+        outlier_threshold = areas[4].slider("Outlier Threshold", min_value=0.0, max_value=5.0, step=0.1, value=previous.get("start_threshold", 3.0), key=str(uid) + "5")
+        threshold_stepdown = areas[5].slider("Outlier Threshold Stepdown", min_value=-1.0, max_value=1.0, step=.05, value=previous.get("threshold_stepdown", 0.25), key=str(uid) + "6")
         data = {
             "smooth":True,
             "window_length":window_len,
