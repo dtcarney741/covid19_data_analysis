@@ -65,7 +65,9 @@ class DataHandler:
             "polyorder":1,
             "iters":2,
             "start_threshold":3,
-            "threshold_stepdown":0
+            "threshold_stepdown":0,
+            "moving_average":False,
+            "moving_average_length":7
         })
         
         self.num_plots += 1
@@ -182,7 +184,8 @@ class DataHandler:
                 y_data = self.original_y[0][i]
                 if self.plot_configurations[index]["smooth"]:
                     x_data, y_data = data_analysis.smooth_dataset(x_data, y_data, **self.plot_configurations[0])
-
+                if self.plot_configurations[index]["moving_average"]:
+                    y_data = data_analysis.moving_average(y_data, self.plot_configurations[0]["moving_average_length"])
                 x_dataset.append(x_data)
                 y_dataset.append(y_data)
 

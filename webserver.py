@@ -46,7 +46,9 @@ class SmoothingOptionsInfo:
                 "polyorder":3,
                 "iters":2,
                 "start_threshold":3.0,
-                "threshold_stepdown":0.25
+                "threshold_stepdown":0.25,
+                "moving_average":False,
+                "moving_average_length":7
             }]
             
     def get_settings(self, i):
@@ -233,10 +235,15 @@ def get_configuration(uid, areas, previous={}):
         DESCRIPTION.
 
     """
-    default = int(not(previous.get("smooth", False)))
+    if (previous.get("smooth",True)):
+        default = 1
+    elif (previous.get("moving_average",True)):
+        default = 2
+    else:
+        default = 0
     # smooth = areas[0].radio("Smooth Graph", ['Yes', 'No'], 1, key=str(uid) + "1")
-    radio = areas[0].radio("Smooth Graph", ['Yes', 'No'], default, key=str(uid) + "1")
-    if radio.upper() == "YES":
+    radio = areas[0].radio("Smooth Graph", ['None', 'Savitzky Golay', 'Moving Average'], default, key=str(uid) + "1")
+    if radio.upper() == "SAVITZKY GOLAY":
         # test functionality of configuration screen
         window_len = areas[1].slider("Filter Window Length", min_value=1, max_value=15, step=2, value=previous.get("window_length", 5), key=str(uid) + "2")
         poly_order = areas[2].slider("Filter Polynomial Degree", min_value=0, max_value=15, step=1, value=previous.get("polyorder", 3), key=str(uid) + "3")
@@ -249,7 +256,15 @@ def get_configuration(uid, areas, previous={}):
             "polyorder":poly_order,
             "iters":iters,
             "start_threshold":outlier_threshold,
-            "threshold_stepdown":threshold_stepdown
+            "threshold_stepdown":threshold_stepdown,
+            "moving_average":False
+        }
+    elif radio.upper() == "MOVING AVERAGE":
+        moving_average_len = areas[6].slider("Moving Average Length", min_value=1, max_value=15, step=1, value=previous.get("window_length", 5), key=str(uid) + "7")
+        data = {
+            "smooth":False,
+            "moving_average":True,
+            "moving_average_length":moving_average_len
         }
     else:
         data = {
@@ -258,7 +273,9 @@ def get_configuration(uid, areas, previous={}):
             "polyorder":previous.get("polyorder", 3),
             "iters":previous.get("iters", 2),
             "start_threshold":previous.get("start_threshold", 3.0),
-            "threshold_stepdown":previous.get("threshold_stepdown", 0.25)
+            "threshold_stepdown":previous.get("threshold_stepdown", 0.25),
+            "moving_average":False,
+            "moving_average_length":7
         }
         
     return data
@@ -518,7 +535,7 @@ if mode == "Line Chart":
     areas.append(st.empty())
     
     smooth_areas = []  # area for smoothing options
-    for j in range(6):
+    for j in range(7):
         smooth_areas.append(st.empty())
     data = get_configuration(0, smooth_areas, get_smoothing_options_session_info().get_settings(0)) 
     get_smoothing_options_session_info().set_settings(0, data)

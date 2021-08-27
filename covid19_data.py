@@ -5,6 +5,7 @@ import multiprocessing as mp
 import os
 import requests
 import math
+import data_analysis
 
 import github_directory_tree
 import matplotlib_gui
@@ -425,27 +426,17 @@ class Covid19_Tree_Node:
             list of log of moving average of new cases rates if valid data (bottoms out at 0 to focus range on high incident rate nodes), None if no valid data
         """
         if data_set:
-            moving_average_sum = 0
+            moving_average_data = data_analysis.moving_average(data_set, days)
             rate = []
-            for i in range(1,len(data_set)):
-                if data_set[i]:
-                    add_value = data_set[i] * scale
+            
+            for i in range(1,len(moving_average_data)):
+                value = moving_average_data[i] * scale
+                if value > 1:
+                    log_value = math.log(moving_average_data[i] * scale, log_base)
                 else:
-                    add_value = 0
-                if i >= days:
-                    if data_set[i-days]:
-                        sub_value = data_set[i-days] * scale
-                    else:
-                        sub_value = 0
-                    moving_average_sum = moving_average_sum + add_value - sub_value
-                else:
-                    moving_average_sum = moving_average_sum + add_value
-                moving_average = moving_average_sum/days
-                if moving_average > 1:
-                    value = math.log(moving_average, log_base)
-                else:
-                    value = 0
-                rate.append(value)
+                    log_value = 0
+                rate.append(log_value)
+
             return rate
         else:
             return None
