@@ -35,7 +35,7 @@ class DataHandler:
         self.add_dataset(x_datasets, y_datasets, labels)
 
 
-    def add_dataset(self, x_datasets, y_datasets, labels):
+    def add_dataset(self, x_dataset, y_dataset, labels):
         """
         Adds the first original dataset to be picked up and plotted by the mainloop
 
@@ -53,21 +53,18 @@ class DataHandler:
         None.
 
         """
-        self.original_x.append(x_datasets)
-        self.original_y.append(y_datasets)
+        assert(len(x_dataset) == len(y_dataset))
         
-        self.x_datasets.append(x_datasets)
-        self.y_datasets.append(y_datasets)
+        self.original_x.append(x_dataset)
+        self.original_y.append(y_dataset)
+        
+        self.x_datasets.append(x_dataset)
+        self.y_datasets.append(y_dataset)
         self.labels_dataset.append(labels)
         self.plot_configurations.append({
             "smooth":False,
-            "window_length":9,
-            "polyorder":1,
-            "iters":2,
-            "start_threshold":3,
-            "threshold_stepdown":0,
-            "moving_average":False,
-            "moving_average_length":7
+            "savgol":None,
+            "moving_average":None
         })
         
         self.num_plots += 1
@@ -112,6 +109,7 @@ class DataHandler:
         x_dataset = []
         y_dataset = []
         for x, y in zip(self.x_datasets[-1], self.y_datasets[-1]):
+            assert(len(x) == len(y))
             x_data, y_data = data_analysis.derivative(
                 x,
                 y
@@ -164,8 +162,14 @@ class DataHandler:
             y_dataset = []
             for x, y in zip(self.x_datasets[index - 1], self.y_datasets[index - 1]):
                 x_data, y_data = data_analysis.derivative(x,y)
-                if self.plot_configurations[index]["smooth"]:
-                    x_data, y_data = data_analysis.smooth_dataset(x_data, y_data, **self.plot_configurations[index])
+                print("begin message")
+                print(self.plot_configurations)
+                print(self.plot_configurations[index - 1])
+                print(self.plot_configurations[index])
+                if self.plot_configurations[index]["smooth"] == "Savitzky Golay":
+                    x_data, y_data = data_analysis.smooth_dataset(x_data, y_data, **self.plot_configurations[index]["savgol"].toDict())
+                elif self.plot_configurations[index]["smooth"] == "Moving Average":
+                    y_data = data_analysis.moving_average(y_data, self.plot_configurations[index]["moving_average"].window_length)
                 x_dataset.append(x_data)
                 y_dataset.append(y_data)
 
@@ -182,10 +186,10 @@ class DataHandler:
             for i, dataset in enumerate(zip(self.x_datasets[0], self.y_datasets[0])):
                 x_data = self.original_x[0][i]
                 y_data = self.original_y[0][i]
-                if self.plot_configurations[index]["smooth"]:
-                    x_data, y_data = data_analysis.smooth_dataset(x_data, y_data, **self.plot_configurations[0])
-                if self.plot_configurations[index]["moving_average"]:
-                    y_data = data_analysis.moving_average(y_data, self.plot_configurations[0]["moving_average_length"])
+                if self.plot_configurations[0]["smooth"] == "Savitzky Golay":
+                    x_data, y_data = data_analysis.smooth_dataset(x_data, y_data, **self.plot_configurations[0]["savgol"].toDict())
+                elif self.plot_configurations[0]["smooth"] == "Moving Average":
+                    y_data = data_analysis.moving_average(y_data, self.plot_configurations[0]["moving_average"].window_length)
                 x_dataset.append(x_data)
                 y_dataset.append(y_data)
 

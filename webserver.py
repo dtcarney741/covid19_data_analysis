@@ -18,11 +18,37 @@ import plotly.graph_objects as go
 import pycountry_convert as pc
 from urllib.request import urlopen
 import us
+import pickle
 
 import covid19_data
 import data_grabber
 import plot_handler
 
+
+class SavGolParameters:
+    def __init__(self, window_length=5, poly_order=1, iterations=2, start_threshold=3.0, threshold_stepdown=0.25):
+        self.window_length = window_length
+        self.poly_order = poly_order
+        self.iterations = iterations
+        self.start_threshold = start_threshold
+        self.threshold_stepdown = threshold_stepdown
+        
+        
+    def toDict(self):
+        return {
+            "window_length":self.window_length,
+            "polyorder":self.poly_order,
+            "iters":self.iterations,
+            "start_threshold":self.start_threshold,
+            "threshold_stepdown":self.threshold_stepdown
+        }
+        
+    
+class MovingAverageParameters:
+    def __init__(self, window_length=7):
+        self.window_length = window_length
+        
+        
 
 class SmoothingOptionsInfo:
     __instance = None 
@@ -41,14 +67,9 @@ class SmoothingOptionsInfo:
             SmoothingOptionsInfo.__instance = self
             
             self.data = [{
-                "smooth":False,
-                "window_length":5,
-                "polyorder":3,
-                "iters":2,
-                "start_threshold":3.0,
-                "threshold_stepdown":0.25,
-                "moving_average":False,
-                "moving_average_length":7
+                "smooth":"none",
+                "savgol":SavGolParameters(),
+                "moving_average":MovingAverageParameters()
             }]
             
     def get_settings(self, i):
@@ -57,12 +78,9 @@ class SmoothingOptionsInfo:
         else:
             # st.warning("IndexError Avoided: Smoothing options at i=" + str(i) + " does not exist")
             return {
-                "smooth":False,
-                "window_length":5,
-                "polyorder":3,
-                "iters":2,
-                "start_threshold":3.0,
-                "threshold_stepdown":0.25
+                "smooth":"none",
+                "savgol":SavGolParameters(),
+                "moving_average":MovingAverageParameters()
             }
         
     def set_settings(self, i, data):
@@ -168,6 +186,11 @@ def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
         data that was parsed from files.
 
     """
+    if(os.path.isfile("data")):
+        with open("data", "rb") as data_file:
+            data = pickle.load(data_file)
+            return data
+        
     data = covid19_data.Covid19_Data()
     for file_url in file_urls:
         spinner_text = "Reading time series file: " + file_url
@@ -181,6 +204,10 @@ def parse_data(file_urls, us_daily_reports_folder, world_daily_reports_folder):
     # covid19_data.dump_tree_to_file(data.time_series_data_tree, "test.txt")
     with st.spinner("Reading population data"):
         data.read_population_data("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/UID_ISO_FIPS_LookUp_Table.csv")
+    
+    with open("data", "wb") as data_file:
+        pickle.dump(data, data_file)
+    
     return data
 
              
@@ -213,7 +240,7 @@ def get_smoothing_options_session_info():
     return SmoothingOptionsInfo.get_instance()
 
             
-def get_configuration(uid, areas, previous={}):
+def get_smoothing_configuration(uid, areas, previous={}):
     """
     Uses streamlit api to get configuration for smoothing algorithm
 
@@ -235,49 +262,46 @@ def get_configuration(uid, areas, previous={}):
         DESCRIPTION.
 
     """
-    if (previous.get("smooth",True)):
-        default = 1
-    elif (previous.get("moving_average",True)):
+    # TODO: use st.form because that means things will not update until user clicks a button
+    # leading to a more responsive gui
+    
+    if (previous.get("smooth") == "Moving Average"):
         default = 2
+    elif (previous.get("smooth") == "Savitzky Golay"):
+        default = 1
     else:
         default = 0
-    # smooth = areas[0].radio("Smooth Graph", ['Yes', 'No'], 1, key=str(uid) + "1")
+        
+    data = previous
+    
     radio = areas[0].radio("Smooth Graph", ['None', 'Savitzky Golay', 'Moving Average'], default, key=str(uid) + "1")
     if radio.upper() == "SAVITZKY GOLAY":
-        # test functionality of configuration screen
-        window_len = areas[1].slider("Filter Window Length", min_value=1, max_value=15, step=2, value=previous.get("window_length", 5), key=str(uid) + "2")
-        poly_order = areas[2].slider("Filter Polynomial Degree", min_value=0, max_value=15, step=1, value=previous.get("polyorder", 3), key=str(uid) + "3")
-        iters = areas[3].slider("Itrerations", min_value=0, max_value=30, step=1, value=previous.get("iters", 2), key=str(uid) + "4")
-        outlier_threshold = areas[4].slider("Outlier Threshold", min_value=0.0, max_value=5.0, step=0.1, value=previous.get("start_threshold", 3.0), key=str(uid) + "5")
-        threshold_stepdown = areas[5].slider("Outlier Threshold Stepdown", min_value=-1.0, max_value=1.0, step=.05, value=previous.get("threshold_stepdown", 0.25), key=str(uid) + "6")
-        data = {
-            "smooth":True,
-            "window_length":window_len,
-            "polyorder":poly_order,
-            "iters":iters,
-            "start_threshold":outlier_threshold,
-            "threshold_stepdown":threshold_stepdown,
-            "moving_average":False
-        }
+        form = areas[1].form(key=str(uid) + "form")
+        window_len = form.slider("Filter Window Length", min_value=1, max_value=15, step=2, value=previous.get("window_length", 5), key=str(uid) + "2")
+        poly_order = form.slider("Filter Polynomial Degree", min_value=0, max_value=15, step=1, value=previous.get("polyorder", 3), key=str(uid) + "3")
+        iters = form.slider("Itrerations", min_value=0, max_value=30, step=1, value=previous.get("iters", 2), key=str(uid) + "4")
+        outlier_threshold = form.slider("Outlier Threshold", min_value=0.0, max_value=5.0, step=0.1, value=previous.get("start_threshold", 3.0), key=str(uid) + "5")
+        threshold_stepdown = form.slider("Outlier Threshold Stepdown", min_value=-1.0, max_value=1.0, step=.05, value=previous.get("threshold_stepdown", 0.25), key=str(uid) + "6")
+        if(form.form_submit_button(label="Ok")):
+            data = {
+                "smooth":"Savitzky Golay",
+                "savgol":SavGolParameters(window_len, poly_order, iters, outlier_threshold, threshold_stepdown),
+                "moving_average":previous.get("moving_average")
+            }
+
     elif radio.upper() == "MOVING AVERAGE":
-        moving_average_len = areas[6].slider("Moving Average Length", min_value=1, max_value=15, step=1, value=previous.get("window_length", 5), key=str(uid) + "7")
+        moving_average_len = areas[1].slider("Moving Average Length", min_value=1, max_value=15, step=1, value=previous.get("window_length", 5), key=str(uid) + "7")
         data = {
-            "smooth":False,
-            "moving_average":True,
-            "moving_average_length":moving_average_len
+            "smooth":"Moving Average",
+            "savgol":previous.get("savgol"),
+            "moving_average":MovingAverageParameters(moving_average_len)
         }
     else:
         data = {
-            "smooth":False,
-            "window_length":previous.get("window_length", 5),
-            "polyorder":previous.get("polyorder", 3),
-            "iters":previous.get("iters", 2),
-            "start_threshold":previous.get("start_threshold", 3.0),
-            "threshold_stepdown":previous.get("threshold_stepdown", 0.25),
-            "moving_average":False,
-            "moving_average_length":7
+            "smooth":"none",
+            "savgol":previous.get("savgol"),
+            "moving_average":previous.get("moving_average")
         }
-        
     return data
 
 
@@ -537,7 +561,7 @@ if mode == "Line Chart":
     smooth_areas = []  # area for smoothing options
     for j in range(7):
         smooth_areas.append(st.empty())
-    data = get_configuration(0, smooth_areas, get_smoothing_options_session_info().get_settings(0)) 
+    data = get_smoothing_configuration(0, smooth_areas, get_smoothing_options_session_info().get_settings(0)) 
     get_smoothing_options_session_info().set_settings(0, data)
     
     for dataset in plots_data:
@@ -581,7 +605,6 @@ if mode == "Line Chart":
                 data_entry.update_plot_data(data_entry.num_plots)
         get_graph_session_info().increment_derivative_count()
         user_interaction_areas.append(partition)
-        new_der_btn.empty()
         
     
     # configuration for derivative plots -- this also includes option to remove plot
@@ -598,7 +621,7 @@ if mode == "Line Chart":
             continue  # move to next derivative number if derivative is removed
         
         
-        data = get_configuration(i + 1, partition[2], get_smoothing_options_session_info().get_settings(i + 1))
+        data = get_smoothing_configuration(i + 1, partition[2], get_smoothing_options_session_info().get_settings(i + 1))
         get_smoothing_options_session_info().set_settings(i + 1, data)
         
         for dataset in plots_data:

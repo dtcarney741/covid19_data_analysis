@@ -107,7 +107,7 @@ def smooth_dataset(x_data, y_data, **kwargs):
                 
         x_data = new_x
         invalid_points = []
-        for i, data_point in enumerate(new_y):              # convert invalid numbers to 0 so that filter
+        for i, data_point in enumerate(new_y):              # convert invalid numbers to 0 so that filter works
             if np.isnan(data_point) or data_point == None:  # but keep track of indexes so they can be
                 new_y[i] = 0                                # set back to invalid and not plotted once
                 invalid_points.append(i)                    # filter has been run
@@ -192,7 +192,7 @@ def moving_average(y_data, window_len):
         will return None if something goes wrong
 
     """
-    if y_data and window_len < len(y_data) and window_len > 0:
+    if window_len < len(y_data) and window_len > 0:
         moving_average_sum = 0
         moving_avg_data = []
         

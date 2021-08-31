@@ -993,12 +993,19 @@ class Covid19_Data:
 
         """
         file_date_val = datetime.datetime.strptime(self.github_tree.split_file(filename),'%m-%d-%Y')
-        print(" retrieving data for ", filename, " - ", file_date_val)
+        print("retrieving data for ", filename, " - ", file_date_val)
 
         url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/"
         url += filename.strip("/")
+        import time
+        start1 = time.time()
         response = requests.get(url)
+        end1 = time.time()
+        start2 = time.time()
         lines = response.content.decode("utf-8").splitlines()
+        end2 = time.time()
+        print("\n\n", "retrieve:", end1 - start1, "parse:", end2 - start2)
+        
 
         # reader_obj = csv.reader(lines)
 
@@ -1047,7 +1054,7 @@ class Covid19_Data:
                         return False
             csv_file_obj.close()
         else:
-            pool = mp.Pool(processes=12)  # retrieve data in parallel because it is very slow otherwise
+            pool = mp.Pool(processes=8)  # retrieve data in parallel because it is very slow otherwise
             results = pool.map(self.retrieve_url_data, self.github_tree.list_files(folder, extensions=".csv"))
 
             for lines, file_date_val in results:
