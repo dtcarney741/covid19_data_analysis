@@ -196,12 +196,15 @@ def moving_average(y_data, window_len):
         moving_average_sum = 0
         moving_avg_data = []
         
-        for i in range(1,len(y_data)):
+        for i in range(0,len(y_data)):
             if y_data[i] and not np.isnan(y_data[i]):
                 add_value = y_data[i]
             else:
                 add_value = 0
-            if i >= window_len:
+            if i == window_len-1:
+                moving_average_sum = moving_average_sum + add_value
+                moving_average = moving_average_sum/window_len
+            elif i >= window_len:
                 if y_data[i - window_len] and not np.isnan(y_data[i - window_len]):
                     sub_value = y_data[i - window_len]
                 else:
