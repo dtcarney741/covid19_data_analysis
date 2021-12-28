@@ -495,6 +495,7 @@ data_options = {
     "Confirmed Cases to People Tested Ratio":"get_ratio_confirmed_cases_to_people_tested",
     "New Confirmed Cases to People Tested Ratio":"get_daily_ratio_confirmed_cases_to_people_tested",
     "Case Fatality Rate":"get_case_fatality_rate",
+    "30 Day Moving Window Case Fatality Rate":"get_moving_window_case_fatality_rate",
     "Testing Incident":"get_calculated_people_tested_incident_rate"
 }
 

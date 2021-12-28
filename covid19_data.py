@@ -258,6 +258,23 @@ class Covid19_Tree_Node:
         else:
             return None
 
+    def get_moving_window_case_fatality_rate(self):
+        """
+        calculates the moving window case fatality rate over 30 day periods of a node as deaths over past 30 days divided by confirmed cases over past 30 days
+
+        Returns
+        -------
+        moving_window_fatality_rate : list
+            list of fatality rates.
+
+        """
+        if self.confirmed_cases_time_series_data and self.deaths_time_series_data:
+            moving_window_fatality_rate = data_analysis.moving_window_ratio(self.deaths_time_series_data, self.confirmed_cases_time_series_data, 30)
+    
+            return moving_window_fatality_rate
+        else:
+            return None
+        
     def get_calculated_cases_incident_rate(self):
         """
         calculates the case incident rate (cases per 100K of population) of a node as confirmed cases / population * 100000

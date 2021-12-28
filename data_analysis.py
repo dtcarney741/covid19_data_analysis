@@ -222,3 +222,71 @@ def moving_average(y_data, window_len):
     else:
         return None
     
+def moving_window_ratio(num_data, den_data, window_len):
+    """
+    calculates the ratio between the sum of two sets of data in a moving window
+
+    Parameters
+    ----------
+    num_data : list of data values for the numerator of the ratio (int or float)
+    den_data : list of data values for the denominator of the ratio (int or float)
+    window_len : integer with number of data points to include in each window calculation ()
+
+    Raises
+    ------
+
+    Returns
+    -------
+    moving_average : list
+        list of moving average values by day (the first window_len values in the list will be None)
+        will return None if something goes wrong
+
+    """
+    if window_len < len(num_data) and window_len > 0 and len(num_data) == len(den_data):
+        window_num_sum = 0
+        window_den_sum = 0
+        window_ratio_data = []
+        
+        for i in range(0,len(num_data)):
+            if num_data[i] and not np.isnan(num_data[i]):
+                add_num_value = num_data[i]
+            else:
+                add_num_value = 0
+            if den_data[i] and not np.isnan(den_data[i]):
+                add_den_value = den_data[i]
+            else:
+                add_den_value = 0
+            if i == window_len-1:
+                window_num_sum = window_num_sum + add_num_value
+                window_den_sum = window_den_sum + add_den_value
+                if window_den_sum != 0:
+                    ratio = window_num_sum / window_den_sum
+                else:
+                    ratio = None
+            elif i >= window_len:
+                if num_data[i - window_len] and not np.isnan(num_data[i - window_len]):
+                    sub_num_value = num_data[i - window_len]
+                else:
+                    sub_num_value = 0
+                if den_data[i - window_len] and not np.isnan(den_data[i - window_len]):
+                    sub_den_value = den_data[i - window_len]
+                else:
+                    sub_den_value = 0                
+                window_num_sum = window_num_sum + add_num_value - sub_num_value
+                window_den_sum = window_den_sum + add_den_value - sub_den_value
+                if window_den_sum != 0:
+                    ratio = window_num_sum / window_den_sum
+                else:
+                    ratio = None
+            else:
+                window_num_sum = window_num_sum + add_num_value
+                window_den_sum = window_den_sum + add_den_value
+                ratio = None
+
+            window_ratio_data.append(ratio)
+
+        return window_ratio_data
+                
+    else:
+        return None
+ 
